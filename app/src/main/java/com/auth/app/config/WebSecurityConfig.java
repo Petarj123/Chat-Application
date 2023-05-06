@@ -41,7 +41,7 @@ public class WebSecurityConfig {
                 .csrf()
                 .disable()
                 .authorizeHttpRequests()
-                .requestMatchers("/api/auth/**")
+                .requestMatchers("/api/auth/**", "/websocket/**")
                 .permitAll()
                 .anyRequest()
                 .authenticated()
