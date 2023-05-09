@@ -18,6 +18,7 @@ public class Invitation {
     private String id;
     private String senderId;
     private String recipientId;
+    private String chatroomId;
     private InvitationStatus status;
 
 }

@@ -11,11 +11,11 @@ import com.auth.app.repository.ChatRoomRepository;
 import com.auth.app.repository.InvitationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.socket.WebSocketSession;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -43,6 +43,7 @@ public class ChatService implements ChatInterface {
         Invitation invitation = Invitation.builder()
                 .senderId(userId)
                 .recipientId(invitationRequest.recipientId())
+                .chatroomId(invitationRequest.chatroomId())
                 .status(InvitationStatus.PENDING)
                 .build();
         invitationRepository.save(invitation);
@@ -50,12 +51,31 @@ public class ChatService implements ChatInterface {
     }
 
     @Override
-    public void acceptInvitation(InvitationRequest invitationRequest, String token) {
+    public void acceptInvitation(String invitationId, String token) {
+        Invitation invitation = invitationRepository.findById(invitationId).orElseThrow();
+        String userId = jwtService.extractId(token);
 
+        if (userId.equals(invitation.getRecipientId())){
+
+            ChatRoom chatRoom = chatRoomRepository.findById(invitation.getChatroomId()).orElseThrow();
+            List<String> participants = chatRoom.getParticipantIds();
+            participants.add(invitation.getRecipientId());
+            invitation.setStatus(InvitationStatus.INVITATION_ACCEPTED);
+
+            invitationRepository.save(invitation);
+            chatRoomRepository.save(chatRoom);
+        }
     }
 
-    @Override
-    public void declineInvitation(InvitationRequest invitationRequest, String token) {
 
+    @Override
+    public void declineInvitation(String invitationId, String token) {
+        Invitation invitation = invitationRepository.findById(invitationId).orElseThrow();
+        String userId = jwtService.extractId(token);
+
+        if (userId.equals(invitation.getRecipientId())){
+            invitation.setStatus(InvitationStatus.INVITATION_DECLINED);
+            invitationRepository.save(invitation);
+        }
     }
 }

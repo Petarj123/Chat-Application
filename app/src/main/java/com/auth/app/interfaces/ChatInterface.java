@@ -8,6 +8,6 @@ public interface ChatInterface {
 
     void createChatRoom(ChatRoomRequest room, String token);
     void sendInvitation(InvitationRequest invitationRequest, String token);
-    void acceptInvitation(InvitationRequest invitationRequest, String token);
-    void declineInvitation(InvitationRequest invitationRequest, String token);
+    void acceptInvitation(String invitationId, String token);
+    void declineInvitation(String invitationId, String token);
 }
