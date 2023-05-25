@@ -1,15 +1,13 @@
 package com.auth.app.service;
 
-import com.auth.app.DTO.ChatRoomRequest;
 import com.auth.app.DTO.InvitationRequest;
 import com.auth.app.interfaces.ChatImpl;
 import com.auth.app.jwt.JwtService;
 import com.auth.app.model.*;
-import com.auth.app.repository.ChatRoomRepository;
-import com.auth.app.repository.ChatRoomTopicRepository;
-import com.auth.app.repository.InvitationRepository;
-import com.auth.app.repository.UserRepository;
+import com.auth.app.repository.*;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,15 +23,16 @@ public class ChatService implements ChatImpl {
     private final InvitationRepository invitationRepository;
     private final UserRepository userRepository;
     private final ChatRoomTopicRepository chatRoomTopicRepository;
+    private final SimpMessagingTemplate simpMessageTemplate;
+    private final MessageRepository messageRepository;
 
     @Override
-    public void createChatRoom(ChatRoomRequest room, String token) {
+    public void createChatRoom(String token) {
         String creatorId = jwtService.extractId(token);
         User user = userRepository.findByEmail(jwtService.extractEmail(token)).orElseThrow();
         ChatRoom chatRoom = ChatRoom.builder()
                 .participantIds(new ArrayList<>())
                 .messages(new ArrayList<>())
-                .type(room.type())
                 .createdAt(new Date(System.currentTimeMillis()))
                 .build();
         List<String> participants = chatRoom.getParticipantIds();
@@ -42,12 +41,16 @@ public class ChatService implements ChatImpl {
         chatRoomRepository.save(chatRoom);
 
         List<String> chatRooms = user.getChatRooms();
+        if (chatRooms == null) {
+            chatRooms = new ArrayList<>();
+        }
         chatRooms.add(chatRoom.getId());
         user.setChatRooms(chatRooms);
         userRepository.save(user);
 
         String chatRoomTopic = "/app/" + chatRoom.getId();
         ChatRoomTopic topic = ChatRoomTopic.builder()
+                .chatRoomId(chatRoom.getId())
                 .topic(chatRoomTopic)
                 .build();
         chatRoomTopicRepository.save(topic);
@@ -92,5 +95,27 @@ public class ChatService implements ChatImpl {
             invitation.setStatus(InvitationStatus.INVITATION_DECLINED);
             invitationRepository.save(invitation);
         }
+    }
+
+    public void sendMessage(String roomId, String text, String token){
+        String userId = jwtService.extractId(token);
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow();
+        List<String> participants = chatRoom.getParticipantIds();
+        List<Message> messages = chatRoom.getMessages();
+        if (!participants.contains(userId)){
+            throw new JwtException("User " + userId + "is not a participant");
+        }
+        Message message = Message.builder()
+                .sender(userId)
+                .text(text)
+                .sentAt(new Date())
+                .build();
+        ChatRoomTopic topic = chatRoomTopicRepository.findByChatRoomId().orElseThrow();
+        simpMessageTemplate.convertAndSend(topic.getTopic(), message);
+        messages.add(message);
+        chatRoom.setMessages(messages);
+
+        messageRepository.save(message);
+        chatRoomRepository.save(chatRoom);
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Builder
 public class ChatRoomTopic {
     @Id
-    private String id;
+    private String topicId;
+    private String chatRoomId;
     private String topic;
 }

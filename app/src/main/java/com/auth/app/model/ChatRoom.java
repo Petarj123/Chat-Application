@@ -20,6 +20,5 @@ public class ChatRoom {
     private String id;
     private List<String> participantIds;
     private List<Message> messages;
-    private Type type;
     private Date createdAt;
 }
