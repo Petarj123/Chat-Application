@@ -27,6 +27,7 @@ public class User implements UserDetails {
     private Date createdAt;
     private String resetToken;
     private String refreshToken;
+    private List<String> chatRooms;
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return null;

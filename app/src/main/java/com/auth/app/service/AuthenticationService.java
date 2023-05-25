@@ -20,10 +20,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * The type Authentication service.
@@ -65,6 +62,7 @@ public class AuthenticationService {
                 .builder()
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
+                .chatRooms(new ArrayList<>())
                 .role(Role.USER)
                 .createdAt(new Date())
                 .build();
