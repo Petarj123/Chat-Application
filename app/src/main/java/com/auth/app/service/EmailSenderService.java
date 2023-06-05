@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * The type Email sender service.
@@ -45,7 +46,13 @@ public class EmailSenderService {
         message.setFrom("nnotificationovic@gmail.com");
         message.setTo(to);
         message.setSubject("Password Recovery");
-        message.setText("Please click on following link "+resetLink);
+        message.setText("Please click on following link " + buildResetLink(resetLink));
         mailSender.send(message);
+    }
+    private String buildResetLink(String resetToken) {
+        String resetUrl = "http://localhost:8080/reset-password"; // Specify the reset password URL
+        return UriComponentsBuilder.fromUriString(resetUrl)
+                .queryParam("token", resetToken)
+                .toUriString();
     }
 }

@@ -50,6 +50,7 @@ public class AuthenticationController {
      */
     @PostMapping("/authenticate")
     @ResponseStatus(HttpStatus.OK)
+    @ResponseBody
     public AuthenticationResponse authenticate(@RequestBody AuthenticationRequest request){
         return authenticationService.authenticate(request);
     }
