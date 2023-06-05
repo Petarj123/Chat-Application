@@ -23,7 +23,7 @@ public class ChatService implements ChatImpl {
     private final InvitationRepository invitationRepository;
     private final UserRepository userRepository;
     private final ChatRoomTopicRepository chatRoomTopicRepository;
-    private final SimpMessagingTemplate simpMessageTemplate;
+    /*private final SimpMessagingTemplate simpMessageTemplate;*/
     private final MessageRepository messageRepository;
 
     @Override
@@ -111,7 +111,7 @@ public class ChatService implements ChatImpl {
                 .sentAt(new Date())
                 .build();
         ChatRoomTopic topic = chatRoomTopicRepository.findByChatRoomId().orElseThrow();
-        simpMessageTemplate.convertAndSend(topic.getTopic(), message);
+        /*simpMessageTemplate.convertAndSend(topic.getTopic(), message);*/
         messages.add(message);
         chatRoom.setMessages(messages);
 

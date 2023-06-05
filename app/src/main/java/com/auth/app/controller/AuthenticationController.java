@@ -33,6 +33,7 @@ public class AuthenticationController {
      */
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
+    @ResponseBody
     public void registerUser(@RequestBody RegistrationRequest request) throws InvalidPasswordException, UnavailableEmailException, InvalidEmailException {
         authenticationService.registerUser(request);
     }
