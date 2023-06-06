@@ -3,6 +3,7 @@ package com.auth.app.config;
 import com.auth.app.repository.AdminRepository;
 import com.auth.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -123,7 +124,7 @@ public class AppConfig {
     }
 
     @Bean
-    public RestTemplate restTemplate() {
-        return new RestTemplate();
+    public OkHttpClient okHttpClient(){
+        return new OkHttpClient();
     }
 }

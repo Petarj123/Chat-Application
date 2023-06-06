@@ -1,6 +1,7 @@
 package com.auth.app.views;
 
 import com.auth.app.DTO.AuthenticationRequest;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vaadin.flow.component.UI;
@@ -14,18 +15,21 @@ import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import okhttp3.*;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
+
 @Route("login")
 @PageTitle("Login")
 public class LoginView extends VerticalLayout {
-    private final RestTemplate restTemplate;
+    private final OkHttpClient okHttpClient;
 
-    public LoginView(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    public LoginView(OkHttpClient okHttpClient) {
+        this.okHttpClient = okHttpClient;
 
         setClassName("container");
         setJustifyContentMode(JustifyContentMode.CENTER);
@@ -47,7 +51,11 @@ public class LoginView extends VerticalLayout {
 
         Button loginButton = new Button("Login");
         loginButton.addClickListener(e -> {
-            authenticate(emailField.getValue(), passwordField.getValue()); // Call your authentication logic here
+            try {
+                authenticate(emailField.getValue(), passwordField.getValue()); // Call your authentication logic here
+            } catch (JsonProcessingException ex) {
+                throw new RuntimeException(ex);
+            }
         });
 
         loginButton.setWidthFull(); // Set the login button width to match the password field
@@ -59,18 +67,26 @@ public class LoginView extends VerticalLayout {
 
         add(form);
     }
-    private void authenticate(String email, String password) {
+    private void authenticate(String email, String password) throws JsonProcessingException {
         String authenticateUrl = "http://localhost:8080/api/auth/authenticate";
 
         AuthenticationRequest request = new AuthenticationRequest(email, password);
+        ObjectMapper objectMapper = new ObjectMapper();
 
-        try {
-            ResponseEntity<String> responseEntity = restTemplate.postForEntity(authenticateUrl, request, String.class);
-            HttpStatusCode statusCode = responseEntity.getStatusCode();
+        MediaType mediaType = MediaType.parse("application/json");
+        String json = objectMapper.writeValueAsString(request);
+        RequestBody requestBody = RequestBody.create(json, mediaType);
 
-            if (statusCode.is2xxSuccessful()) {
-                String responseBody = responseEntity.getBody();
-                ObjectMapper objectMapper = new ObjectMapper();
+        Request httpRequest = new Request.Builder()
+                .url(authenticateUrl)
+                .post(requestBody)
+                .build();
+
+        try (Response httpResponse = okHttpClient.newCall(httpRequest).execute()) {
+            int statusCode = httpResponse.code();
+            String responseBody = httpResponse.body().string();
+
+            if (statusCode >= 200 && statusCode < 300) {
                 JsonNode jsonNode = objectMapper.readTree(responseBody);
 
                 if (jsonNode != null) {
@@ -81,19 +97,17 @@ public class LoginView extends VerticalLayout {
                     page.executeJs("localStorage.setItem('token', $0)", token);
 
                     // Redirect to another view or perform any additional actions
-                    UI.getCurrent().navigate("dashboard");
+                    UI.getCurrent().navigate("chat");
                 } else {
                     System.out.println("Empty response body");
                 }
             } else {
                 System.out.println("Request failed with status code: " + statusCode);
             }
-        } catch (HttpClientErrorException ex) {
-            System.out.println("HTTP error occurred: " + ex.getMessage());
-        } catch (Exception ex) {
-            System.out.println("An error occurred: " + ex.getMessage());
+        } catch (IOException e) {
+            System.out.println("IO error occurred: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("An error occurred: " + e.getMessage());
         }
     }
-
-
 }

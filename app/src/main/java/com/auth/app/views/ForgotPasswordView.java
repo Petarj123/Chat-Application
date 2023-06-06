@@ -1,6 +1,8 @@
 package com.auth.app.views;
 
 import com.auth.app.DTO.EmailRequest;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.H2;
@@ -10,6 +12,10 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
@@ -17,10 +23,10 @@ import org.springframework.web.client.RestTemplate;
 @Route("forgot-password")
 @PageTitle("Password Reset")
 public class ForgotPasswordView extends VerticalLayout{
-    private final RestTemplate restTemplate;
+    private final OkHttpClient okHttpClient;
 
-    public ForgotPasswordView(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    public ForgotPasswordView(OkHttpClient okHttpClient) {
+        this.okHttpClient = okHttpClient;
 
         setClassName("container");
         setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
@@ -39,19 +45,32 @@ public class ForgotPasswordView extends VerticalLayout{
         emailField.setRequired(true);
 
         Button recoveryButton = new Button("Recover password");
-        recoveryButton.addClickListener(e -> initForgotPassword(emailField.getValue()));
+        recoveryButton.addClickListener(e -> {
+            try {
+                initForgotPassword(emailField.getValue());
+            } catch (JsonProcessingException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
 
         form.add(title, emailField, recoveryButton);
 
         add(form);
 
     }
-    private void initForgotPassword(String email){
+    private void initForgotPassword(String email) throws JsonProcessingException {
         String url = "http://localhost:8080/api/auth/recovery";
-
+        ObjectMapper objectMapper = new ObjectMapper();
         EmailRequest request = new EmailRequest(email);
 
-        ResponseEntity<Void> response = restTemplate.postForEntity(url, request, Void.class);
+        String json = objectMapper.writeValueAsString(request);
+        MediaType mediaType = MediaType.parse("application/json");
+        RequestBody requestBody = RequestBody.create(json, mediaType);
+
+        Request httpRequest = new Request.Builder()
+                .url(url)
+                .post(requestBody)
+                .build();
 
         UI.getCurrent().navigate("login");
     }

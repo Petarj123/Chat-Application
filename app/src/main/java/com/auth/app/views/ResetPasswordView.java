@@ -11,6 +11,7 @@ import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
+import okhttp3.OkHttpClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponents;
@@ -19,10 +20,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Route("reset-password")
 @PageTitle("Reset Password")
 public class ResetPasswordView extends VerticalLayout {
-    private final RestTemplate restTemplate;
+    private final OkHttpClient okHttpClient;
 
-    public ResetPasswordView(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    public ResetPasswordView(OkHttpClient okHttpClient) {
+        this.okHttpClient = okHttpClient;
 
         setClassName("container");
         setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
@@ -52,7 +53,7 @@ public class ResetPasswordView extends VerticalLayout {
     }
     // TODO FIX THIS
     private void resetPassword(String password, String confirmPassword) {
-        String url = "http://localhost:8080/api/auth/reset";
+        /*String url = "http://localhost:8080/api/auth/reset";
         String currentUrl = UI.getCurrent().getPage().fetchCurrentURL();
         UriComponents components = UriComponentsBuilder.fromUriString(currentUrl).build();
         String token = components.getQueryParams().getFirst("token");
@@ -61,7 +62,7 @@ public class ResetPasswordView extends VerticalLayout {
                 .toUriString();
         PasswordRequest request = new PasswordRequest(password, confirmPassword);
         restTemplate.put(resetUrl, request);
-
+*/
         UI.getCurrent().navigate("login");
     }
 }
