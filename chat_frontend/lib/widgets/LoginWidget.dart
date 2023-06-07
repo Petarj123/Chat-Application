@@ -110,17 +110,13 @@ class _LoginWidgetState extends State<LoginWidget> {
                       children: <Widget>[
                         TextButton(
                           onPressed: () {
-                            Navigator.push(context,
-                            MaterialPageRoute(builder: (context) => RegisterWidget()));
+                            Navigator.pushNamed(context, '/register');
                           },
                           child: const Text('Register'),
                         ),
                         TextButton(
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => PasswordRecoveryWidget()),
-                            );
+                            Navigator.pushNamed(context, '/password-recovery');
                           },
                           child: const Text('Forgot password?'),
                         ),
