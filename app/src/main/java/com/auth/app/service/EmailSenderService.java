@@ -50,7 +50,7 @@ public class EmailSenderService {
         mailSender.send(message);
     }
     private String buildResetLink(String resetToken) {
-        String resetUrl = "http://localhost:8080/reset-password"; // Specify the reset password URL
+        String resetUrl = "http://localhost:50981/reset-password"; // Specify the reset password URL
         return UriComponentsBuilder.fromUriString(resetUrl)
                 .queryParam("token", resetToken)
                 .toUriString();

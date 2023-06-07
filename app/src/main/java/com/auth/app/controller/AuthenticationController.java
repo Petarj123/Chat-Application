@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:50981")
 public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
