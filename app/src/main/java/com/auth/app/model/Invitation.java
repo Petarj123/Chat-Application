@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.Date;
+
 @Document(collection = "invites")
 @Data
 @AllArgsConstructor
@@ -17,8 +19,9 @@ public class Invitation {
     @Id
     private String id;
     private String senderId;
-    private String recipientId;
     private String chatroomId;
-    private InvitationStatus status;
+    private String invitationLink;
+    private Date createdAt;
+    private boolean isExpired;
 
 }
