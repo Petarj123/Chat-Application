@@ -5,6 +5,7 @@ class ChatWidget extends StatelessWidget {
   void logout() {
 
   }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(

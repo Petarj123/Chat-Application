@@ -1,5 +1,6 @@
 package com.auth.app.service;
 
+import com.auth.app.exceptions.ChatRoomException;
 import com.auth.app.exceptions.InvalidInvitationException;
 import com.auth.app.jwt.JwtService;
 import com.auth.app.model.*;
@@ -36,17 +37,18 @@ public class ChatService {
         List<String> participants = chatRoom.getParticipantIds();
         participants.add(userId);
         chatRoom.setParticipantIds(participants);
+        chatRoomRepository.save(chatRoom);
 
         List<String> userChatRooms = user.getChatRooms();
         userChatRooms.add(chatRoom.getId());
         user.setChatRooms(userChatRooms);
 
         userRepository.save(user);
-        chatRoomRepository.save(chatRoom);
+
     }
 
 
-    public Invitation createInvite(String token, String roomId) {
+    public String createInvite(String token, String roomId) {
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow();
         String userId = jwtService.extractId(token);
 
@@ -61,14 +63,17 @@ public class ChatService {
                 .isExpired(false)
                 .build();
         invitationRepository.save(invitation);
-        return invitation;
+        return invitation.getInvitationLink();
     }
-    public void acceptInvite(String token, String invitationLink) throws InvalidInvitationException {
+    public void acceptInvite(String token, String invitationLink) throws InvalidInvitationException, ChatRoomException {
         String userId = jwtService.extractId(token);
         if (isInvitationValid(invitationLink)){
             Invitation invitation = invitationRepository.findByInvitationLink(invitationLink).orElseThrow();
             ChatRoom chatRoom = chatRoomRepository.findById(invitation.getChatroomId()).orElseThrow();
             List<String> chatRoomParticipants = chatRoom.getParticipantIds();
+            if (chatRoomParticipants.contains(userId)){
+                throw new ChatRoomException("User is already part of this room");
+            }
             chatRoomParticipants.add(userId);
 
             chatRoom.setParticipantIds(chatRoomParticipants);

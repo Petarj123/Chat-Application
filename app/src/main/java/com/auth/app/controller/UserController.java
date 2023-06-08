@@ -1,7 +1,11 @@
 package com.auth.app.controller;
 
 import com.auth.app.DTO.InvitationRequest;
+import com.auth.app.DTO.RoomRequest;
+import com.auth.app.exceptions.ChatRoomException;
+import com.auth.app.exceptions.InvalidInvitationException;
 import com.auth.app.model.ChatRoom;
+import com.auth.app.model.Message;
 import com.auth.app.service.ChatService;
 import com.auth.app.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -19,13 +23,33 @@ public class UserController {
     private final ChatService chatService;
     @GetMapping("/allChats")
     @ResponseStatus(HttpStatus.OK)
-    public List<ChatRoom> getAllChats(@RequestHeader("Authorization") String token) {
+    public List<ChatRoom> getAllChats(@RequestHeader("Authorization") String header) {
+        String token = header.substring(7);
         return userService.getAllChatRooms(token);
+    }
+    @GetMapping("/allMessages")
+    @ResponseStatus(HttpStatus.OK)
+    public List<Message> getAllMessages(@RequestHeader("Authorization") String header, @RequestBody RoomRequest request) throws ChatRoomException {
+        String token = header.substring(7);
+        return userService.getAllMessages(token, request.roomId());
     }
     @PostMapping("/createRoom")
     @ResponseStatus(HttpStatus.CREATED)
-    public void createChatRoom(@RequestHeader("Authorization") String token){
+    public void createChatRoom(@RequestHeader("Authorization") String header){
+        String token = header.substring(7);
         chatService.createChatRoom(token);
+    }
+    @PostMapping("/invite")
+    @ResponseStatus(HttpStatus.CREATED)
+    public String createInvite(@RequestHeader("Authorization") String header, @RequestBody RoomRequest request){
+        String token = header.substring(7);
+        return chatService.createInvite(token, request.roomId());
+    }
+    @PostMapping("/acceptInvite")
+    @ResponseStatus(HttpStatus.OK)
+    public void acceptInvite(@RequestHeader("Authorization") String header, @RequestBody InvitationRequest request) throws InvalidInvitationException, ChatRoomException {
+        String token = header.substring(7);
+        chatService.acceptInvite(token, request.invitationLink());
     }
 
 }
