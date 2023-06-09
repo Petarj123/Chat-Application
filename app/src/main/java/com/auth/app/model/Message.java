@@ -19,6 +19,5 @@ public class Message {
     private String messageId;
     private String text;
     private String sender;
-    private String receiver;
     private Date sentAt;
 }

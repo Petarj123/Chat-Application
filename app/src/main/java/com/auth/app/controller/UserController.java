@@ -28,7 +28,7 @@ public class UserController {
         String token = header.substring(7);
         return userService.getAllChatRooms(token);
     }
-    @GetMapping("/allMessages")
+    @PostMapping("/allMessages")
     @ResponseStatus(HttpStatus.OK)
     public List<Message> getAllMessages(@RequestHeader("Authorization") String header, @RequestBody RoomRequest request) throws ChatRoomException {
         String token = header.substring(7);
