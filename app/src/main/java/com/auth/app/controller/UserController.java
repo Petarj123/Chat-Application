@@ -1,6 +1,7 @@
 package com.auth.app.controller;
 
 import com.auth.app.DTO.InvitationRequest;
+import com.auth.app.DTO.RoomNameRequest;
 import com.auth.app.DTO.RoomRequest;
 import com.auth.app.exceptions.ChatRoomException;
 import com.auth.app.exceptions.InvalidInvitationException;
@@ -35,9 +36,9 @@ public class UserController {
     }
     @PostMapping("/createRoom")
     @ResponseStatus(HttpStatus.CREATED)
-    public void createChatRoom(@RequestHeader("Authorization") String header){
+    public void createChatRoom(@RequestHeader("Authorization") String header, @RequestBody RoomNameRequest request) {
         String token = header.substring(7);
-        chatService.createChatRoom(token);
+        chatService.createChatRoom(token, request.roomName());
     }
     @PostMapping("/invite")
     @ResponseStatus(HttpStatus.CREATED)

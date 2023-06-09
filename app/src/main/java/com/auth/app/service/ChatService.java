@@ -1,5 +1,6 @@
 package com.auth.app.service;
 
+import com.auth.app.DTO.RoomNameRequest;
 import com.auth.app.exceptions.ChatRoomException;
 import com.auth.app.exceptions.InvalidInvitationException;
 import com.auth.app.jwt.JwtService;
@@ -26,10 +27,11 @@ public class ChatService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
 
-    public void createChatRoom(String token) {
+    public void createChatRoom(String token, String roomName) {
         String userId = jwtService.extractId(token);
         User user = userRepository.findById(userId).orElseThrow();
         ChatRoom chatRoom = ChatRoom.builder()
+                .roomName(roomName)
                 .participantIds(new ArrayList<>())
                 .messages(new ArrayList<>())
                 .createdAt(new Date())
@@ -97,12 +99,11 @@ public class ChatService {
                 .text(text)
                 .sentAt(new Date())
                 .build();
-        ChatRoomTopic topic = chatRoomTopicRepository.findByChatRoomId().orElseThrow();
-        /*simpMessageTemplate.convertAndSend(topic.getTopic(), message);*/
+        messageRepository.save(message);
+
         messages.add(message);
         chatRoom.setMessages(messages);
 
-        messageRepository.save(message);
         chatRoomRepository.save(chatRoom);
     }
     private String generateInvitationLink() {
