@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../DTO/ChatRoomResponse.dart';
-
-
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class ChatWidget extends StatefulWidget {
   const ChatWidget({super.key});
@@ -83,9 +82,29 @@ class _ChatWidgetState extends State<ChatWidget> {
     }
   }
   void connectToSocketIO(Object? token) {
-    //TODO
-  }
+    final socket = IO.io(
+      'http://127.0.0.1:8000',
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .setQuery({'token': 'Bearer $token'})
+          .disableAutoConnect()
+          .build(),
+    );
 
+    socket.onConnect((_) {
+      print('Connected to Socket.IO server');
+    });
+
+    socket.onDisconnect((_) {
+      print('Disconnected from Socket.IO server');
+    });
+
+    socket.on('message', (data) {
+      print('Received message from Socket.IO server: $data');
+    });
+
+    socket.connect();
+  }
 
   @override
   Widget build(BuildContext context) {

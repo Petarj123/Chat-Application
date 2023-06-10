@@ -40,8 +40,7 @@ public class SocketIOConfig {
         server = new SocketIOServer(config);
         server.start();
         server.addConnectListener(socketIOClient -> {
-            final String header = socketIOClient.getHandshakeData().getHttpHeaders().get("Authorization");
-            System.out.println(header);
+            final String header = socketIOClient.getHandshakeData().getUrlParams().get("token").get(0);
             if (header == null || !header.startsWith("Bearer ")) {
                 socketIOClient.disconnect();
                 return;
