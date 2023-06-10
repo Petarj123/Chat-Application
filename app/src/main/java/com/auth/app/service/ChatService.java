@@ -88,14 +88,17 @@ public class ChatService {
 
     public void sendMessage(String roomId, String text, String token){
         String userId = jwtService.extractId(token);
+        String username = jwtService.extractEmail(token);
+
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow();
         List<String> participants = chatRoom.getParticipantIds();
         List<Message> messages = chatRoom.getMessages();
+
         if (!participants.contains(userId)){
             throw new JwtException("User " + userId + "is not a participant");
         }
         Message message = Message.builder()
-                .sender(userId)
+                .sender(username)
                 .text(text)
                 .sentAt(new Date())
                 .build();

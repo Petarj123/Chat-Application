@@ -14,7 +14,9 @@ Future<List<ChatRoomDTO>> getAllChats() async {
     final List<ChatRoomDTO> chatRooms = jsonData
         .map((json) => ChatRoomDTO.fromJson(json))
         .toList();
-
+    for(var chat in chatRooms){
+      print(chat.roomName);
+    }
     return chatRooms;
   } else {
     // Request failed
@@ -60,12 +62,14 @@ class RoomRequest {
 }
 class ChatRoomDTO {
   final String id;
+  final String roomName;
   final List<String> participantIds;
   final List<MessageDTO> messages;
   final DateTime createdAt;
 
   ChatRoomDTO({
     required this.id,
+    required this.roomName,
     required this.participantIds,
     required this.messages,
     required this.createdAt,
@@ -74,6 +78,7 @@ class ChatRoomDTO {
   factory ChatRoomDTO.fromJson(Map<String, dynamic> json) {
     return ChatRoomDTO(
       id: json['id'],
+      roomName: json['roomName'],
       participantIds: List<String>.from(json['participantIds']),
       messages: List<MessageDTO>.from(
         json['messages'].map((messageJson) => MessageDTO.fromJson(messageJson)),
@@ -99,7 +104,7 @@ class MessageDTO {
   factory MessageDTO.fromJson(Map<String, dynamic> json) {
     return MessageDTO(
       messageId: json['messageId'],
-      text: json['text'],
+      text: json['text'] as String? ?? '',
       sender: json['sender'],
       sentAt: DateTime.parse(json['sentAt']),
     );

@@ -94,10 +94,10 @@ public class JwtService implements JwtImplementation{
         if (userDetails instanceof User) {
             extraClaims.put("role", ((User) userDetails).getRole().name());
             extraClaims.put("id", ((User) userDetails).getUserId());
+            extraClaims.put("sub",((User) userDetails).getEmail());
             return Jwts
                     .builder()
                     .setClaims(extraClaims)
-                    .setSubject(userDetails.getUsername())
                     .setIssuedAt(new Date(System.currentTimeMillis()))
                     .setExpiration(expirationDate)
                     .signWith(getSignInKey(), SignatureAlgorithm.HS256)
@@ -105,10 +105,10 @@ public class JwtService implements JwtImplementation{
         }
         extraClaims.put("role", ((Admin) userDetails).getRole().name());
         extraClaims.put("id", ((Admin) userDetails).getId());
+        extraClaims.put("sub",((Admin) userDetails).getEmail());
         return Jwts
                 .builder()
                 .setClaims(extraClaims)
-                .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(expirationDate)
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
@@ -131,8 +131,8 @@ public class JwtService implements JwtImplementation{
         HashMap<String, Object> extraClaims = new HashMap<String, Object>();
         extraClaims.put("id", id);
         extraClaims.put("role", role);
+        extraClaims.put("sub", username);
         return Jwts.builder()
-                .setSubject(username)
                 .setClaims(extraClaims)
                 .setIssuedAt(now)
                 .setExpiration(expirationDate)
@@ -208,7 +208,7 @@ public class JwtService implements JwtImplementation{
      */
     @Override
     public String extractEmail(String token) {
-        return extractClaim(token, Claims::getSubject);
+        return extractClaim(token, claims -> claims.get("sub", String.class));
     }
 
     /**

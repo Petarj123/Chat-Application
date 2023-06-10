@@ -10,6 +10,7 @@ import com.auth.app.model.Message;
 import com.auth.app.service.ChatService;
 import com.auth.app.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ public class UserController {
 
     private final UserService userService;
     private final ChatService chatService;
+
     @GetMapping("/allChats")
     @ResponseStatus(HttpStatus.OK)
     public List<ChatRoom> getAllChats(@RequestHeader("Authorization") String header) {

@@ -40,11 +40,14 @@ public class WebSecurityConfig {
      * @return a SecurityFilterChain that is used to secure the application.
      * @throws Exception if there is an error configuring the HttpSecurity object.
      */
+    // TODO: Implement csrf
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf()
                 .disable()
+                .cors()
+                .and()
                 .authorizeHttpRequests()
                 .requestMatchers("/api/auth/**")
                 .permitAll()

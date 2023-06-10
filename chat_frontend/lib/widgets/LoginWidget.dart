@@ -36,11 +36,12 @@ class _LoginWidgetState extends State<LoginWidget> {
       // Parse the response body for the token
       Map<String, dynamic> responseBody = jsonDecode(response.body);
       String token = responseBody['token'];
-      print(token);
+
       // Save the token in local storage
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('token', token);
 
+      Navigator.pushReplacementNamed(context, '/chat');
       print('Logged in successfully');
     } else {
       print('Failed to login');
