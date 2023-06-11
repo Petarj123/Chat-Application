@@ -69,10 +69,12 @@ public class ChatService {
     }
     public void acceptInvite(String token, String invitationLink) throws InvalidInvitationException, ChatRoomException {
         String userId = jwtService.extractId(token);
+        User user = userRepository.findById(userId).orElseThrow();
         if (isInvitationValid(invitationLink)){
             Invitation invitation = invitationRepository.findByInvitationLink(invitationLink).orElseThrow();
             ChatRoom chatRoom = chatRoomRepository.findById(invitation.getChatroomId()).orElseThrow();
             List<String> chatRoomParticipants = chatRoom.getParticipantIds();
+            List<String> userChatRooms = user.getChatRooms();
             if (chatRoomParticipants.contains(userId)){
                 throw new ChatRoomException("User is already part of this room");
             }
@@ -83,6 +85,9 @@ public class ChatService {
 
             invitation.setExpired(true);
             invitationRepository.save(invitation);
+
+            userChatRooms.add(chatRoom.getId());
+            userRepository.save(user);
         }
     }
 

@@ -17,6 +17,11 @@ class ChatWidget extends StatefulWidget {
 class _ChatWidgetState extends State<ChatWidget> {
   List<ChatRoomDTO> chatRooms = [];
   List<MessageDTO>? messages;
+  String? activeRoomId;
+  final textEditingController = TextEditingController();
+  IO.Socket? socket;
+  final ScrollController _messageScrollController = ScrollController();
+
 
   @override
   void initState() {
@@ -54,6 +59,8 @@ class _ChatWidgetState extends State<ChatWidget> {
   }
 
   Future<List<MessageDTO>> joinChatRoom(String id) async {
+    activeRoomId = id;
+
     final prefs = await SharedPreferences.getInstance();
     Object? token = prefs.get('token');
     const url = 'http://localhost:8080/api/user/allMessages';
@@ -75,14 +82,16 @@ class _ChatWidgetState extends State<ChatWidget> {
       });
       print("Success");
       connectToSocketIO(token);
+      scrollToBottom();
       return messages;
     } else {
       print('Request failed with status: ${response.statusCode}');
       return [];
     }
   }
+
   void connectToSocketIO(Object? token) {
-    final socket = IO.io(
+    socket = IO.io(
       'http://127.0.0.1:8000',
       IO.OptionBuilder()
           .setTransports(['websocket'])
@@ -91,177 +100,209 @@ class _ChatWidgetState extends State<ChatWidget> {
           .build(),
     );
 
-    socket.onConnect((_) {
+    socket?.onConnect((_) {
       print('Connected to Socket.IO server');
     });
 
-    socket.onDisconnect((_) {
+    socket?.onDisconnect((_) {
       print('Disconnected from Socket.IO server');
     });
 
-    socket.on('message', (data) {
-      print('Received message from Socket.IO server: $data');
+    socket?.on('message', (data) {
+      setState(() {
+        messages?.add(MessageDTO.fromJson(data as Map<String, dynamic>));
+      });
+      scrollToBottom();
     });
 
-    socket.connect();
+    socket?.connect();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    bool isMessageSectionVisible = messages != null;
+  void sendMessage() {
+    if (activeRoomId != null && textEditingController.text.isNotEmpty) {
+      socket!.emitWithAck('sendMessage',
+          {'roomId': activeRoomId, 'text': textEditingController.text},
+          ack: (List<dynamic> data) {
+            setState(() {
+              messages = data.map((json) =>
+                  MessageDTO.fromJson(json as Map<String, dynamic>)).toList();
+            });
+            scrollToBottom();
+          });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chat'),
-      ),
-      body: Row(
-        children: <Widget>[
-          Expanded(
-            flex: 1,
-            child: Container(
-              color: Colors.grey[200],
-              child: Column(
-                children: <Widget>[
-                  Expanded(
-                    child: Container(
-                      margin: const EdgeInsets.all(10),
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8.0),
-                        color: Colors.white,
+      textEditingController.clear();
+    }
+  }
+  void scrollToBottom() {
+    WidgetsBinding.instance?.addPostFrameCallback((_) {
+      _messageScrollController.animateTo(
+        _messageScrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.fastOutSlowIn,
+      );
+    });
+  }
+
+    @override
+    Widget build(BuildContext context) {
+      bool isMessageSectionVisible = messages != null;
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Chat'),
+        ),
+        body: Row(
+          children: <Widget>[
+            Expanded(
+              flex: 1,
+              child: Container(
+                color: Colors.grey[200],
+                child: Column(
+                  children: <Widget>[
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8.0),
+                          color: Colors.white,
+                        ),
+                        child: ListView.builder(
+                          itemCount: chatRooms.length,
+                          itemBuilder: (context, index) {
+                            final chatRoom = chatRooms[index];
+                            final lastMessage = chatRoom.messages.isNotEmpty
+                                ? chatRoom.messages.last
+                                : null;
+
+                            return ListTile(
+                              title: Text(
+                                chatRoom.roomName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: lastMessage != null
+                                  ? Text(
+                                lastMessage.text,
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                ),
+                              )
+                                  : null,
+                              onTap: () {
+                                setState(() {
+                                  joinChatRoom(chatRoom.id);
+                                  isMessageSectionVisible = true;
+                                });
+                                scrollToBottom();
+                              },
+                            );
+                          },
+                        ),
                       ),
-                      child: ListView.builder(
-                        itemCount: chatRooms.length,
-                        itemBuilder: (context, index) {
-                          final chatRoom = chatRooms[index];
-                          final lastMessage = chatRoom.messages.isNotEmpty
-                              ? chatRoom.messages.last
-                              : null;
-
-                          return ListTile(
-                            title: Text(
-                              chatRoom.roomName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: lastMessage != null
-                                ? Text(
-                              lastMessage.text,
-                              style: const TextStyle(
-                                color: Colors.grey,
-                              ),
-                            )
-                                : null,
-                            onTap: () {
-                              setState(() {
-                                joinChatRoom(chatRoom.id);
-                                isMessageSectionVisible = true;
-                              });
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        children: <Widget>[
+                          ElevatedButton(
+                            onPressed: () {
+                              // Handle chat creation
                             },
+                            child: const Text('Create Chat'),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.exit_to_app),
+                            onPressed: () {
+                              // Handle logout
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(
+              flex: 3,
+              child: Visibility(
+                visible: isMessageSectionVisible,
+                child: Column(
+                  children: <Widget>[
+                    Container(
+                      padding: const EdgeInsets.all(8.0),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: Colors.grey,
+                            width: 1.0,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: <Widget>[
+                          IconButton(
+                            icon: const Icon(Icons.people),
+                            onPressed: () {
+                              // Handle participants button
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.person_add),
+                            onPressed: () {
+                              // Handle invite button
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _messageScrollController,
+                        itemCount: messages != null ? messages!.length : 0,
+                        itemBuilder: (context, index) {
+                          final message = messages![index];
+                          return ListTile(
+                            title: Text(message.text),
+                            subtitle: Text(message.sender),
                           );
                         },
                       ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: <Widget>[
-                        ElevatedButton(
-                          onPressed: () {
-                            // Handle chat creation
-                          },
-                          child: const Text('Create Chat'),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.exit_to_app),
-                          onPressed: () {
-                            // Handle logout
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(
-            flex: 3,
-            child: Visibility(
-              visible: isMessageSectionVisible,
-              child: Column(
-                children: <Widget>[
-                  Container(
-                    padding: const EdgeInsets.all(8.0),
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Colors.grey,
-                          width: 1.0,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        IconButton(
-                          icon: const Icon(Icons.people),
-                          onPressed: () {
-                            // Handle participants button
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.person_add),
-                          onPressed: () {
-                            // Handle invite button
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: messages != null ? messages!.length : 0,
-                      itemBuilder: (context, index) {
-                        final message = messages![index];
-                        return ListTile(
-                          title: Text(message.text),
-                          subtitle: Text(message.sender),
-                        );
-                      },
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: <Widget>[
-                        const Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(
-                              labelText: 'Enter message',
+                    Container(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: TextField(
+                              controller: textEditingController,
+                              decoration: const InputDecoration(
+                                labelText: 'Enter message',
+                              ),
                             ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.send),
-                          onPressed: () {
-                            // Handle message sending
-                          },
-                        ),
-                      ],
+                          IconButton(
+                            icon: const Icon(Icons.send),
+                            onPressed: () {
+                              sendMessage();
+                              scrollToBottom();
+                            },
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    }
   }
-}
+

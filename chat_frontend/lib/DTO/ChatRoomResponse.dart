@@ -92,7 +92,7 @@ class MessageDTO {
   final String messageId;
   final String text;
   final String sender;
-  final DateTime sentAt;
+  final String sentAt;
 
   MessageDTO({
     required this.messageId,
@@ -105,8 +105,8 @@ class MessageDTO {
     return MessageDTO(
       messageId: json['messageId'],
       text: json['text'] as String? ?? '',
-      sender: json['sender'],
-      sentAt: DateTime.parse(json['sentAt']),
+      sender: json['sender'] is String ? json['sender'] : json['sender'].toString(),
+      sentAt: json['sentAt'].toString(),
     );
   }
 }
