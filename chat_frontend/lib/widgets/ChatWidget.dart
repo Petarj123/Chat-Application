@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
@@ -22,13 +23,12 @@ class _ChatWidgetState extends State<ChatWidget> {
   IO.Socket? socket;
   final ScrollController _messageScrollController = ScrollController();
 
-
   @override
   void initState() {
     super.initState();
     fetchChatRooms();
+    connectToSocketIO();
   }
-
   Future<List<ChatRoomDTO>> getAllChats() async {
     final prefs = await SharedPreferences.getInstance();
     Object? token = prefs.get('token');
@@ -81,7 +81,6 @@ class _ChatWidgetState extends State<ChatWidget> {
         this.messages = messages;
       });
       print("Success");
-      connectToSocketIO(token);
       scrollToBottom();
       return messages;
     } else {
@@ -90,7 +89,10 @@ class _ChatWidgetState extends State<ChatWidget> {
     }
   }
 
-  void connectToSocketIO(Object? token) {
+  Future<void> connectToSocketIO() async {
+    final prefs = await SharedPreferences.getInstance();
+    Object? token = prefs.get('token');
+    print('Token $token');
     socket = IO.io(
       'http://127.0.0.1:8000',
       IO.OptionBuilder()
@@ -133,6 +135,29 @@ class _ChatWidgetState extends State<ChatWidget> {
       textEditingController.clear();
     }
   }
+  void createChatRoom(String roomName) {
+    if(roomName.isNotEmpty) {
+      socket!.emitWithAck('createChatRoom', {'roomName': roomName},
+          ack: (List<dynamic> data) {
+            setState(() {
+              chatRooms = data.map((json) => ChatRoomDTO.fromJson(json as Map<String, dynamic>)).toList();
+            });
+          }
+      );
+    }
+  }
+  void acceptInvite(String invitationLink){
+    if (invitationLink.isNotEmpty) {
+      socket!.emitWithAck('acceptInvite', {'invitationLink': invitationLink},
+          ack: (List<dynamic> data) {
+            setState(() {
+              chatRooms = data.map((json) =>
+                  ChatRoomDTO.fromJson(json as Map<String, dynamic>)).toList();
+            });
+          }
+      );
+    }
+  }
   void scrollToBottom() {
     WidgetsBinding.instance?.addPostFrameCallback((_) {
       _messageScrollController.animateTo(
@@ -142,167 +167,292 @@ class _ChatWidgetState extends State<ChatWidget> {
       );
     });
   }
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.remove('token');
 
-    @override
-    Widget build(BuildContext context) {
-      bool isMessageSectionVisible = messages != null;
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Chat'),
-        ),
-        body: Row(
-          children: <Widget>[
-            Expanded(
-              flex: 1,
-              child: Container(
-                color: Colors.grey[200],
-                child: Column(
-                  children: <Widget>[
-                    Expanded(
-                      child: Container(
-                        margin: const EdgeInsets.all(10),
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(8.0),
-                          color: Colors.white,
-                        ),
-                        child: ListView.builder(
-                          itemCount: chatRooms.length,
-                          itemBuilder: (context, index) {
-                            final chatRoom = chatRooms[index];
-                            final lastMessage = chatRoom.messages.isNotEmpty
-                                ? chatRoom.messages.last
-                                : null;
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+  Future<String> generateInvitationLink(){
+    Completer<String> completer = Completer<String>();
+    socket!.emitWithAck('createInvite', {'roomId' : activeRoomId},
+        ack: (String data) {
+          completer.complete(data);
+        }
+    );
+    return completer.future;
+  }
+  Future<List<String>> showParticipants() async {
+    Completer<List<String>> completer = Completer<List<String>>();
+    socket!.emitWithAck(
+      'getParticipants',
+      {'roomId': activeRoomId},
+      ack: (List<dynamic> data) {
+        print(data);
+        List<String> participants = List<String>.from(data);
+        completer.complete(participants);
+      },
+    );
+    return completer.future;
+  }
 
-                            return ListTile(
-                              title: Text(
-                                chatRoom.roomName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: lastMessage != null
-                                  ? Text(
-                                lastMessage.text,
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                ),
-                              )
-                                  : null,
-                              onTap: () {
-                                setState(() {
-                                  joinChatRoom(chatRoom.id);
-                                  isMessageSectionVisible = true;
-                                });
-                                scrollToBottom();
-                              },
-                            );
-                          },
-                        ),
+
+  @override
+  Widget build(BuildContext context) {
+    bool isMessageSectionVisible = messages != null;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Chat'),
+      ),
+      body: Row(
+        children: <Widget>[
+          Expanded(
+            flex: 1,
+            child: Container(
+              color: Colors.grey[200],
+              child: Column(
+                children: <Widget>[
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8.0),
+                        color: Colors.white,
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: <Widget>[
-                          ElevatedButton(
-                            onPressed: () {
-                              // Handle chat creation
-                            },
-                            child: const Text('Create Chat'),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.exit_to_app),
-                            onPressed: () {
-                              // Handle logout
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const VerticalDivider(width: 1),
-            Expanded(
-              flex: 3,
-              child: Visibility(
-                visible: isMessageSectionVisible,
-                child: Column(
-                  children: <Widget>[
-                    Container(
-                      padding: const EdgeInsets.all(8.0),
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Colors.grey,
-                            width: 1.0,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          IconButton(
-                            icon: const Icon(Icons.people),
-                            onPressed: () {
-                              // Handle participants button
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.person_add),
-                            onPressed: () {
-                              // Handle invite button
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
                       child: ListView.builder(
-                        controller: _messageScrollController,
-                        itemCount: messages != null ? messages!.length : 0,
+                        itemCount: chatRooms.length,
                         itemBuilder: (context, index) {
-                          final message = messages![index];
+                          final chatRoom = chatRooms[index];
+                          final lastMessage = chatRoom.messages.isNotEmpty
+                              ? chatRoom.messages.last
+                              : null;
+
                           return ListTile(
-                            title: Text(message.text),
-                            subtitle: Text(message.sender),
+                            title: Text(
+                              chatRoom.roomName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: lastMessage != null
+                                ? Text(
+                              lastMessage.text,
+                              style: const TextStyle(
+                                color: Colors.grey,
+                              ),
+                            )
+                                : null,
+                            onTap: () {
+                              setState(() {
+                                joinChatRoom(chatRoom.id);
+                                isMessageSectionVisible = true;
+                              });
+                              scrollToBottom();
+                            },
                           );
                         },
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: TextField(
-                              controller: textEditingController,
-                              decoration: const InputDecoration(
-                                labelText: 'Enter message',
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.send),
-                            onPressed: () {
-                              sendMessage();
-                              scrollToBottom();
-                            },
-                          ),
-                        ],
-                      ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: <Widget>[
+                        ElevatedButton(
+                          onPressed: () {
+                            // Show dialog with TextField and button
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                TextEditingController chatRoomController = TextEditingController();
+                                return AlertDialog(
+                                  title: const Text('Create Chat'),
+                                  content: TextField(
+                                    controller: chatRoomController,
+                                    decoration: const InputDecoration(
+                                      hintText: 'Enter Chat Room Name',
+                                    ),
+                                  ),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: const Text('Create'),
+                                      onPressed: () {
+                                        createChatRoom(chatRoomController.text);
+                                        Navigator.of(context).pop();
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                          child: const Text('Create Chat'),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Show dialog with TextField and button
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                TextEditingController joinChatRoomController = TextEditingController();
+                                return AlertDialog(
+                                  title: const Text('Join Chat'),
+                                  content: TextField(
+                                    controller: joinChatRoomController,
+                                    decoration: const InputDecoration(
+                                      hintText: 'Enter Invitation Link',
+                                    ),
+                                  ),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: const Text('Create'),
+                                      onPressed: () {
+                                        acceptInvite(joinChatRoomController.text);
+                                        Navigator.of(context).pop();
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                          child: const Text('Join Chat'),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.exit_to_app),
+                          onPressed: () {
+                            logout();
+                          },
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      );
-    }
+          ),
+          const VerticalDivider(width: 1),
+          Expanded(
+            flex: 3,
+            child: Visibility(
+              visible: isMessageSectionVisible,
+              child: Column(
+                children: <Widget>[
+                  Container(
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.grey,
+                          width: 1.0,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        IconButton(
+                          icon: const Icon(Icons.people),
+                          onPressed: () async {
+                            List<String> participants = await showParticipants();
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: const Text('Participants'),
+                                  content: ConstrainedBox(
+                                    constraints: BoxConstraints(maxHeight: 300), // change this value to suit your needs
+                                    child: SingleChildScrollView(
+                                      child: Column(
+                                        children: participants.map((participant) => ListTile(title: Text(participant))).toList(),
+                                      ),
+                                    ),
+                                  ),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: const Text('Close'),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.person_add),
+                          onPressed: () async {
+                            String invitationLink = await generateInvitationLink();
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context){
+                                return AlertDialog(
+                                  title: const Text('Invitation Link'),
+                                  content: SelectableText(invitationLink),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: const Text('OK'),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                    )
+                                  ],
+                                );
+                              }
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      controller: _messageScrollController,
+                      itemCount: messages != null ? messages!.length : 0,
+                      itemBuilder: (context, index) {
+                        final message = messages![index];
+                        return ListTile(
+                          title: Text(message.text),
+                          subtitle: Text(message.sender),
+                        );
+                      },
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: TextField(
+                            controller: textEditingController,
+                            decoration: const InputDecoration(
+                              labelText: 'Enter message',
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.send),
+                          onPressed: () {
+                            sendMessage();
+                            scrollToBottom();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
+}
 

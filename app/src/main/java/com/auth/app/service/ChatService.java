@@ -3,6 +3,7 @@ package com.auth.app.service;
 import com.auth.app.DTO.RoomNameRequest;
 import com.auth.app.exceptions.ChatRoomException;
 import com.auth.app.exceptions.InvalidInvitationException;
+import com.auth.app.exceptions.InvalidUserException;
 import com.auth.app.jwt.JwtService;
 import com.auth.app.model.*;
 import com.auth.app.repository.*;
@@ -114,6 +115,23 @@ public class ChatService {
 
         chatRoomRepository.save(chatRoom);
     }
+    public List<String> getParticipants(String token, String roomId) throws ChatRoomException, InvalidUserException {
+        String userId = jwtService.extractId(token);
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Could not find this chat room"));
+
+        if (!chatRoom.getParticipantIds().contains(userId)){
+            throw new ChatRoomException("User with id " + userId + " is not a participant of this chat room");
+        }
+        List<String> participantIds = chatRoom.getParticipantIds();
+        System.out.println(participantIds);
+        List<String> participantEmails = new ArrayList<>();
+
+        for (String participant : participantIds){
+            String participantEmail = getParticipantEmail(participant);
+            participantEmails.add(participantEmail);
+        }
+        return participantEmails;
+    }
     private String generateInvitationLink() {
         String invitationToken = UUID.randomUUID().toString();
         return "chatApp/invite/" + invitationToken;
@@ -134,5 +152,9 @@ public class ChatService {
         } else {
             return true;
         }
+    }
+    private String getParticipantEmail(String participantId) throws InvalidUserException {
+        User user = userRepository.findById(participantId).orElseThrow(() -> new InvalidUserException("Could not find user with this id"));
+        return user.getEmail();
     }
 }

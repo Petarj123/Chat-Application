@@ -65,7 +65,7 @@ class ChatRoomDTO {
   final String roomName;
   final List<String> participantIds;
   final List<MessageDTO> messages;
-  final DateTime createdAt;
+  final String createdAt;
 
   ChatRoomDTO({
     required this.id,
@@ -83,7 +83,7 @@ class ChatRoomDTO {
       messages: List<MessageDTO>.from(
         json['messages'].map((messageJson) => MessageDTO.fromJson(messageJson)),
       ),
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: json['createdAt'].toString(),
     );
   }
 }

@@ -1,8 +1,12 @@
 package com.auth.app.controller;
 
+import com.auth.app.DTO.InvitationRequest;
 import com.auth.app.DTO.MessageRequest;
 import com.auth.app.DTO.RoomNameRequest;
+import com.auth.app.DTO.RoomRequest;
 import com.auth.app.exceptions.ChatRoomException;
+import com.auth.app.exceptions.InvalidInvitationException;
+import com.auth.app.exceptions.InvalidUserException;
 import com.auth.app.model.ChatRoom;
 import com.auth.app.model.Message;
 import com.auth.app.service.ChatService;
@@ -27,6 +31,9 @@ public class SocketIOController {
 
         this.server.addEventListener("sendMessage", MessageRequest.class, this::handleSendMessage);
         this.server.addEventListener("createChatRoom", RoomNameRequest.class, this::handleCreateChatRoom);
+        this.server.addEventListener("acceptInvite", InvitationRequest.class, this::handleAcceptInvite);
+        this.server.addEventListener("createInvite", RoomRequest.class, this::handleCreateInvite);
+        this.server.addEventListener("getParticipants", RoomRequest.class, this::handleGetParticipants);
     }
 
     private void handleCreateChatRoom(SocketIOClient client, RoomNameRequest request, AckRequest ackRequest) {
@@ -48,6 +55,32 @@ public class SocketIOController {
 
         if (ackRequest.isAckRequested()){
             ackRequest.sendAckData(messages);
+        }
+    }
+    private void handleAcceptInvite(SocketIOClient client, InvitationRequest request, AckRequest ackRequest) throws InvalidInvitationException, ChatRoomException {
+        final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
+        String token = header.substring(7);
+        chatService.acceptInvite(token, request.invitationLink());
+        List<ChatRoom> chatRoomList = userService.getAllChatRooms(token);
+        if (ackRequest.isAckRequested()){
+            ackRequest.sendAckData(chatRoomList);
+        }
+    }
+    private void handleCreateInvite(SocketIOClient client, RoomRequest request, AckRequest ackRequest){
+        final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
+        String token = header.substring(7);
+        String invite = chatService.createInvite(token, request.roomId());
+        if (ackRequest.isAckRequested()) {
+            ackRequest.sendAckData(invite);
+        }
+    }
+    private void handleGetParticipants(SocketIOClient client, RoomRequest request, AckRequest ackRequest) throws ChatRoomException, InvalidUserException {
+        final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
+        String token = header.substring(7);
+        List<String> participants = chatService.getParticipants(token, request.roomId());
+
+        if (ackRequest.isAckRequested()) {
+            ackRequest.sendAckData(participants);
         }
     }
 }
