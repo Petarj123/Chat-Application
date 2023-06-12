@@ -55,7 +55,12 @@ public class SocketIOController {
         Message message = chatService.sendMessage(request.roomId(), request.text(), token);
 
         this.server.getRoomOperations(request.roomId()).sendEvent("newMessage", message);
+
+        if (ackRequest.isAckRequested()) {
+            ackRequest.sendAckData(message);
+        }
     }
+
     private void handleAcceptInvite(SocketIOClient client, InvitationRequest request, AckRequest ackRequest) throws InvalidInvitationException, ChatRoomException {
         final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
         String token = header.substring(7);

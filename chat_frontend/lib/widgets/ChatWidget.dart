@@ -59,6 +59,10 @@ class _ChatWidgetState extends State<ChatWidget> {
   }
 
   Future<List<MessageDTO>> joinChatRoom(String id) async {
+    if (activeRoomId != null) {
+      socket!.emit('leaveRoom', {'roomId': activeRoomId});
+    }
+
     activeRoomId = id;
 
     final prefs = await SharedPreferences.getInstance();
@@ -80,7 +84,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       setState(() {
         this.messages = messages;
       });
-      print("Success");
+      socket!.emit('joinRoom', {'roomId': activeRoomId});
       scrollToBottom();
       return messages;
     } else {
@@ -110,10 +114,13 @@ class _ChatWidgetState extends State<ChatWidget> {
       print('Disconnected from Socket.IO server');
     });
 
-    socket?.on('message', (data) {
+    socket?.on('newMessage', (data) {
+      final message = MessageDTO.fromJson(data as Map<String, dynamic>);
+
       setState(() {
-        messages?.add(MessageDTO.fromJson(data as Map<String, dynamic>));
+        messages?.add(message);
       });
+
       scrollToBottom();
     });
 
@@ -122,19 +129,17 @@ class _ChatWidgetState extends State<ChatWidget> {
 
   void sendMessage() {
     if (activeRoomId != null && textEditingController.text.isNotEmpty) {
-      socket!.emitWithAck('sendMessage',
-          {'roomId': activeRoomId, 'text': textEditingController.text},
-          ack: (List<dynamic> data) {
-            setState(() {
-              messages = data.map((json) =>
-                  MessageDTO.fromJson(json as Map<String, dynamic>)).toList();
-            });
-            scrollToBottom();
-          });
+      final message = {
+        'roomId': activeRoomId,
+        'text': textEditingController.text,
+      };
+
+      socket!.emit('sendMessage', message);
 
       textEditingController.clear();
     }
   }
+
   void createChatRoom(String roomName) {
     if(roomName.isNotEmpty) {
       socket!.emitWithAck('createChatRoom', {'roomName': roomName},
