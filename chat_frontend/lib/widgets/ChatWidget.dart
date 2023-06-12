@@ -164,14 +164,13 @@ class _ChatWidgetState extends State<ChatWidget> {
     }
   }
   void scrollToBottom() {
-    WidgetsBinding.instance?.addPostFrameCallback((_) {
-      _messageScrollController.animateTo(
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _messageScrollController.jumpTo(
         _messageScrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.fastOutSlowIn,
       );
     });
   }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     prefs.remove('token');
@@ -208,6 +207,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chat'),
+        backgroundColor: Colors.blueAccent,
       ),
       body: Row(
         children: <Widget>[
@@ -234,28 +234,35 @@ class _ChatWidgetState extends State<ChatWidget> {
                               ? chatRoom.messages.last
                               : null;
 
-                          return ListTile(
-                            title: Text(
-                              chatRoom.roomName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          return Card(
+                            elevation: 5.0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10.0),
                             ),
-                            subtitle: lastMessage != null
-                                ? Text(
-                              lastMessage.text,
-                              style: const TextStyle(
-                                color: Colors.grey,
+                            child: ListTile(
+                              title: Text(
+                                chatRoom.roomName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blueAccent,
+                                ),
                               ),
-                            )
-                                : null,
-                            onTap: () {
-                              setState(() {
-                                joinChatRoom(chatRoom.id);
-                                isMessageSectionVisible = true;
-                              });
-                              scrollToBottom();
-                            },
+                              subtitle: lastMessage != null
+                                  ? Text(
+                                lastMessage.text,
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                ),
+                              )
+                                  : null,
+                              onTap: () {
+                                setState(() {
+                                  joinChatRoom(chatRoom.id);
+                                  isMessageSectionVisible = true;
+                                });
+                                scrollToBottom();
+                              },
+                            ),
                           );
                         },
                       ),
@@ -267,7 +274,6 @@ class _ChatWidgetState extends State<ChatWidget> {
                       children: <Widget>[
                         ElevatedButton(
                           onPressed: () {
-                            // Show dialog with TextField and button
                             showDialog(
                               context: context,
                               builder: (context) {
@@ -298,7 +304,6 @@ class _ChatWidgetState extends State<ChatWidget> {
                         const SizedBox(width: 16),
                         ElevatedButton(
                           onPressed: () {
-                            // Show dialog with TextField and button
                             showDialog(
                               context: context,
                               builder: (context) {
@@ -313,7 +318,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                                   ),
                                   actions: <Widget>[
                                     TextButton(
-                                      child: const Text('Create'),
+                                      child: const Text('Join'),
                                       onPressed: () {
                                         acceptInvite(joinChatRoomController.text);
                                         Navigator.of(context).pop();
@@ -370,7 +375,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                                 return AlertDialog(
                                   title: const Text('Participants'),
                                   content: ConstrainedBox(
-                                    constraints: BoxConstraints(maxHeight: 300), // change this value to suit your needs
+                                    constraints: BoxConstraints(maxHeight: 300),
                                     child: SingleChildScrollView(
                                       child: Column(
                                         children: participants.map((participant) => ListTile(title: Text(participant))).toList(),
@@ -395,21 +400,21 @@ class _ChatWidgetState extends State<ChatWidget> {
                           onPressed: () async {
                             String invitationLink = await generateInvitationLink();
                             showDialog(
-                              context: context,
-                              builder: (BuildContext context){
-                                return AlertDialog(
-                                  title: const Text('Invitation Link'),
-                                  content: SelectableText(invitationLink),
-                                  actions: <Widget>[
-                                    TextButton(
-                                      child: const Text('OK'),
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                    )
-                                  ],
-                                );
-                              }
+                                context: context,
+                                builder: (BuildContext context){
+                                  return AlertDialog(
+                                    title: const Text('Invitation Link'),
+                                    content: SelectableText(invitationLink),
+                                    actions: <Widget>[
+                                      TextButton(
+                                        child: const Text('OK'),
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                      )
+                                    ],
+                                  );
+                                }
                             );
                           },
                         ),
@@ -422,27 +427,67 @@ class _ChatWidgetState extends State<ChatWidget> {
                       itemCount: messages != null ? messages!.length : 0,
                       itemBuilder: (context, index) {
                         final message = messages![index];
-                        return ListTile(
-                          title: Text(message.text),
-                          subtitle: Text(message.sender),
+                        return Card(
+                          elevation: 2.0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          child: ListTile(
+                            title: Text(
+                              message.sender,
+                              style: const TextStyle(
+                                color: Colors.grey,
+                              ),
+                            ),
+                            subtitle: Text(
+                              message.text,
+                              style: const TextStyle(
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
                         );
                       },
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 5, // shadow effect
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 10.0),
                     child: Row(
                       children: <Widget>[
                         Expanded(
                           child: TextField(
                             controller: textEditingController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
                               labelText: 'Enter message',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.send),
+                        const SizedBox(width: 10), // for spacing
+                        ElevatedButton(
+                          style: ButtonStyle(
+                            backgroundColor: MaterialStateProperty.all<Color>(Colors.blue),
+                            shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                              RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                          child: const Icon(Icons.send, color: Colors.white),
                           onPressed: () {
                             sendMessage();
                             scrollToBottom();
@@ -459,5 +504,6 @@ class _ChatWidgetState extends State<ChatWidget> {
       ),
     );
   }
+
 }
 
