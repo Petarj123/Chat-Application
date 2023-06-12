@@ -92,7 +92,7 @@ public class ChatService {
         }
     }
 
-    public void sendMessage(String roomId, String text, String token){
+    public Message sendMessage(String roomId, String text, String token){
         String userId = jwtService.extractId(token);
         String username = jwtService.extractEmail(token);
 
@@ -114,6 +114,8 @@ public class ChatService {
         chatRoom.setMessages(messages);
 
         chatRoomRepository.save(chatRoom);
+
+        return message;
     }
     public List<String> getParticipants(String token, String roomId) throws ChatRoomException, InvalidUserException {
         String userId = jwtService.extractId(token);

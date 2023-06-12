@@ -34,6 +34,8 @@ public class SocketIOController {
         this.server.addEventListener("acceptInvite", InvitationRequest.class, this::handleAcceptInvite);
         this.server.addEventListener("createInvite", RoomRequest.class, this::handleCreateInvite);
         this.server.addEventListener("getParticipants", RoomRequest.class, this::handleGetParticipants);
+        this.server.addEventListener("joinRoom", RoomRequest.class, this::handleJoinRoom);
+        this.server.addEventListener("leaveRoom", RoomRequest.class, this::handleLeaveRoom);
     }
 
     private void handleCreateChatRoom(SocketIOClient client, RoomNameRequest request, AckRequest ackRequest) {
@@ -50,12 +52,9 @@ public class SocketIOController {
     private void handleSendMessage(SocketIOClient client, MessageRequest request, AckRequest ackRequest) throws ChatRoomException {
         final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
         String token = header.substring(7);
-        chatService.sendMessage(request.roomId(), request.text(), token);
-        List<Message> messages = userService.getAllMessages(token, request.roomId());
+        Message message = chatService.sendMessage(request.roomId(), request.text(), token);
 
-        if (ackRequest.isAckRequested()){
-            ackRequest.sendAckData(messages);
-        }
+        this.server.getRoomOperations(request.roomId()).sendEvent("newMessage", message);
     }
     private void handleAcceptInvite(SocketIOClient client, InvitationRequest request, AckRequest ackRequest) throws InvalidInvitationException, ChatRoomException {
         final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
@@ -81,6 +80,21 @@ public class SocketIOController {
 
         if (ackRequest.isAckRequested()) {
             ackRequest.sendAckData(participants);
+        }
+    }
+    private void handleJoinRoom(SocketIOClient client, RoomRequest request, AckRequest ackRequest) {
+        client.joinRoom(request.roomId());
+
+        if (ackRequest.isAckRequested()) {
+            ackRequest.sendAckData("Joined room " + request.roomId());
+        }
+    }
+
+    private void handleLeaveRoom(SocketIOClient client, RoomRequest request, AckRequest ackRequest) {
+        client.leaveRoom(request.roomId());
+
+        if (ackRequest.isAckRequested()) {
+            ackRequest.sendAckData("Left room " + request.roomId());
         }
     }
 }
