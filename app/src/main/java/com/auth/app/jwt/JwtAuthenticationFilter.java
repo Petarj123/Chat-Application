@@ -35,18 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
 
-    /**
-     This method performs the authentication and authorization logic for the application.
-     The method checks the "Authorization" header of the HTTP request to see if it contains a valid JWT token.
-     If the token is valid and not expired, the method sets the authentication context for the current user.
-     If the token is expired, the method checks for a valid refresh token and generates a new JWT token if possible.
-     If the token is invalid or no token is present, the method proceeds to the next filter in the filter chain.
-     @param request the HTTP request to authenticate and authorize.
-     @param response the HTTP response to return.
-     @param filterChain the filter chain that contains the other filters to execute.
-     @throws ServletException if there is an error with the servlet or the filter chain.
-     @throws IOException if there is an error with the input or output streams of the HTTP request/response.
-     */
+    
     @SneakyThrows
     @Override
     protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) {

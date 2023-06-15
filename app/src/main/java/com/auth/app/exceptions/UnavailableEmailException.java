@@ -1,14 +1,12 @@
 package com.auth.app.exceptions;
 
-/**
- * The type Unavailable email exception.
- */
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+
+@ResponseStatus(value = HttpStatus.UNAUTHORIZED)
 public class UnavailableEmailException extends Exception{
-    /**
-     * Instantiates a new Unavailable email exception.
-     *
-     * @param message the message
-     */
+    
     public UnavailableEmailException(String message){
         super(message);
     }

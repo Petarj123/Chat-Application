@@ -1,14 +1,12 @@
 package com.auth.app.exceptions;
 
-/**
- * The type Invalid password exception.
- */
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+
+@ResponseStatus(value = HttpStatus.UNAUTHORIZED)
 public class InvalidPasswordException extends Exception{
-    /**
-     * Instantiates a new Invalid password exception.
-     *
-     * @param message the message
-     */
+    
     public InvalidPasswordException(String message){
         super(message);
     }

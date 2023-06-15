@@ -2,36 +2,62 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-class RegisterWidget extends StatelessWidget {
+class RegisterWidget extends StatefulWidget {
+  RegisterWidget({Key? key}) : super(key: key);
+
+  @override
+  _RegisterWidgetState createState() => _RegisterWidgetState();
+}
+
+class _RegisterWidgetState extends State<RegisterWidget> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
   TextEditingController();
+  String? _errorMessage;
 
-  RegisterWidget({Key? key}) : super(key: key);
-
-  void _register() async {
+  Future<void> _register() async {
     final String email = _emailController.text;
     final String password = _passwordController.text;
     final String confirmPassword = _confirmPasswordController.text;
 
-    final http.Response response = await http.post(
-      Uri.parse('http://localhost:8080/api/auth/register'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, String>{
-        'email': email,
-        'password': password,
-        'confirmPassword': confirmPassword,
-      }),
-    );
+    try {
+      final http.Response response = await http.post(
+        Uri.parse('http://localhost:8080/api/auth/register'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, String>{
+          'email': email,
+          'password': password,
+          'confirmPassword': confirmPassword,
+        }),
+      );
 
-    if (response.statusCode == 201) {
-      print('Registration successful');
-    } else {
-      print('Failed to register');
+      if (response.statusCode == 201) {
+        print('Registration successful');
+        if (mounted) {
+          setState(() {
+            _errorMessage = null;
+          });
+        }
+      } else if (response.statusCode == 403) {
+        Map<String, dynamic> responseBody = jsonDecode(response.body);
+        if (responseBody.containsKey('message')) {
+          throw Exception(responseBody['message']);
+        } else {
+          throw Exception('Registration failed with status code 403');
+        }
+      } else {
+        throw Exception('Registration failed with status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+        });
+      }
     }
   }
 
@@ -51,9 +77,17 @@ class RegisterWidget extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       'Register',
-                      style: Theme.of(context).textTheme.headline4,
+                      style: Theme.of(context).textTheme.headlineMedium,
                       textAlign: TextAlign.center,
                     ),
+                    if (_errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
                     const SizedBox(height: 32),
                     TextFormField(
                       controller: _emailController,

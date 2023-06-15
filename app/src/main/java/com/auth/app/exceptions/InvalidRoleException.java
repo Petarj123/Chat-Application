@@ -1,14 +1,12 @@
 package com.auth.app.exceptions;
 
-/**
- * The type Invalid role exception.
- */
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+
+@ResponseStatus(value = HttpStatus.UNAUTHORIZED)
 public class InvalidRoleException extends Exception{
-    /**
-     * Instantiates a new Invalid role exception.
-     *
-     * @param message the message
-     */
+    
     public InvalidRoleException(String message){
         super(message);
     }

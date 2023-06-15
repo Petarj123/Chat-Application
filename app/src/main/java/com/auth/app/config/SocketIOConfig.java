@@ -31,7 +31,6 @@ public class SocketIOConfig {
     private final CustomUserDetailsService customUserDetailsService;
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
-
     @Bean
     public SocketIOServer socketIOServer(){
         com.corundumstudio.socketio.Configuration config = new com.corundumstudio.socketio.Configuration();
@@ -45,11 +44,9 @@ public class SocketIOConfig {
                 socketIOClient.disconnect();
                 return;
             }
-
             String jwt = header.substring(7);
             String username;
             String role;
-
             try {
                 username = jwtService.extractEmail(jwt);
                 role = jwtService.extractRole(jwt);
@@ -57,41 +54,40 @@ public class SocketIOConfig {
                 socketIOClient.disconnect();
                 return;
             }
-
             if (username != null) {
                 UserDetails userDetails = customUserDetailsService.loadUserByUsernameAndRole(username, role);
                 if (jwtService.isTokenValid(jwt, userDetails)) {
-                    log.info("User connected to " + socketIOClient.getSessionId());
+                    log.debug("User connected to " + socketIOClient.getSessionId());
                 } else if (jwtService.isTokenExpired(jwt)) {
                     try {
                         String refreshToken = getRefreshToken(username);
                         if (!jwtService.isTokenExpired(refreshToken)) {
                             String newJwt = jwtService.refreshJWTToken(refreshToken);
                             socketIOClient.getHandshakeData().getHttpHeaders().set("Authorization", "Bearer " + newJwt);
-                            log.info("User connected to " + socketIOClient.getSessionId());
+                            log.debug("User connected to " + socketIOClient.getSessionId());
                         } else {
                             socketIOClient.disconnect();
                         }
                     } catch (IllegalAccessException e) {
                         socketIOClient.disconnect();
+                        log.error("Error getting refresh token", e);
                     }
                 } else {
                     socketIOClient.disconnect();
                 }
             }
         });
-        server.addDisconnectListener(socketIOClient -> log.info("User disconnected with socket " + socketIOClient.getSessionId()));
+        server.addDisconnectListener(socketIOClient -> log.debug("User disconnected with socket " + socketIOClient.getSessionId()));
         return server;
     }
     private String getRefreshToken(String username) throws IllegalAccessException {
         Optional<User> existingUser = userRepository.findByEmail(username);
         Optional<Admin> existingAdmin = adminRepository.findByEmail(username);
-
         if (existingUser.isPresent()) {
-            User user = existingUser.orElseThrow();
+            User user = existingUser.orElseThrow(() -> new IllegalAccessException("User not found"));
             return user.getRefreshToken();
         } else if (existingAdmin.isPresent()) {
-            Admin admin = existingAdmin.orElseThrow();
+            Admin admin = existingAdmin.orElseThrow(() -> new IllegalAccessException("Admin not found"));
             return admin.getRefreshToken();
         } else {
             throw new IllegalAccessException("Error getting refresh token");

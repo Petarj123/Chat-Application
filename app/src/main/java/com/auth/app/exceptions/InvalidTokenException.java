@@ -1,14 +1,12 @@
 package com.auth.app.exceptions;
 
-/**
- * The type Invalid token exception.
- */
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+
+@ResponseStatus(value = HttpStatus.UNAUTHORIZED)
 public class InvalidTokenException extends Throwable {
-    /**
-     * Instantiates a new Invalid token exception.
-     *
-     * @param message the message
-     */
+    
     public InvalidTokenException(String message) {
         super(message);
     }

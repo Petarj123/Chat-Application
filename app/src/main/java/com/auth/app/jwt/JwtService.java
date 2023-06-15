@@ -17,31 +17,19 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.function.Function;
 
-/**
- * The JWTService class provides utility methods for generating and validating JWT tokens.
- */
+
 @Service
 @RequiredArgsConstructor
 public class JwtService implements JwtImplementation{
 
     private final String SECRET_KEY;
 
-    /**
-     * Generates a JWT token with the given user details.
-     *
-     * @param userDetails the user details to generate the token for
-     * @return the generated JWT token
-     */
+    
     public String generateToken(UserDetails userDetails){
         return generateToken(new HashMap<>(), userDetails);
     }
 
-    /**
-     Generates a JWT token with the given extra claims and user details.
-     @param extraClaims the extra claims to add to the token
-     @param userDetails the user details to generate the token for
-     @return the generated JWT token
-     */
+    
     @Override
     public String generateToken(HashMap<String, Object> extraClaims, UserDetails userDetails) {
         Date now = new Date();
@@ -71,23 +59,12 @@ public class JwtService implements JwtImplementation{
 
     }
 
-    /**
-     * Generates a JWT refresh token with the given user details.
-     *
-     * @param userDetails the user details to generate the refresh token for
-     * @return the generated JWT refresh token
-     */
+    
     public String generateRefreshToken(UserDetails userDetails){
         return generateRefreshToken(new HashMap<>(), userDetails);
     }
 
-    /**
-     * Generates a JWT refresh token with the given extra claims and user details.
-     *
-     * @param extraClaims the extra claims to add to the refresh token
-     * @param userDetails the user details to generate the refresh token for
-     * @return the generated JWT refresh token
-     */
+    
     public String generateRefreshToken(HashMap<String, Object> extraClaims, UserDetails userDetails){
         Date now = new Date();
         Date expirationDate = new Date(now.getTime() + 604800000); // 7 days in milliseconds
@@ -115,12 +92,7 @@ public class JwtService implements JwtImplementation{
                 .compact();
     }
 
-    /**
-     * Refreshes a JWT token with the given refresh token.
-     *
-     * @param refreshToken the refresh token to use for refreshing the token
-     * @return the refreshed JWT token
-     */
+    
     public String refreshJWTToken(String refreshToken) {
         Claims claims = extractAllClaims(refreshToken);
         String username = claims.getSubject();
@@ -140,43 +112,26 @@ public class JwtService implements JwtImplementation{
                 .compact();
     }
 
-    /**
-     Checks if the given token is valid for the given user details.
-     @param token the JWT token to validate
-     @param userDetails the user details to validate the token against
-     @return true if the token is valid, false otherwise
-     */
+    
     @Override
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractEmail(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
-    /**
-     Checks if the given token is expired.
-     @param token the JWT token to check
-     @return true if the token is expired, false otherwise
-     */
+    
     @Override
     public boolean isTokenExpired(String token) {
         return extractExpirationDate(token).before(new Date());
     }
 
-    /**
-     Extracts the expiration date from the given token.
-     @param token the JWT token to extract the expiration date from
-     @return the expiration date of the token
-     */
+    
     @Override
     public Date extractExpirationDate(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    /**
-     Extracts all claims from the given token.
-     @param token the JWT token to extract the claims from
-     @return the claims of the token
-     */
+    
     @Override
     public Claims extractAllClaims(String token) {
         return Jwts
@@ -187,12 +142,7 @@ public class JwtService implements JwtImplementation{
                 .getBody();
     }
 
-    /**
-     * Extracts all claims from the given token, ignoring any expired token exception.
-     *
-     * @param token the JWT token to extract the claims from
-     * @return the claims of the token
-     */
+    
     public Claims extractAllClaimsSafe(String token) {
         try {
             return extractAllClaims(token);
@@ -201,54 +151,32 @@ public class JwtService implements JwtImplementation{
         }
     }
 
-    /**
-     * Extracts the email from the given JWT token.
-     * @param token the JWT token
-     * @return the email extracted from the token
-     */
+    
     @Override
     public String extractEmail(String token) {
         return extractClaim(token, claims -> claims.get("sub", String.class));
     }
 
-    /**
-     * Extracts the role from the given JWT token.
-     * @param token the JWT token
-     * @return the role extracted from the token
-     */
+    
     @Override
     public String extractRole(String token) {
         return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
-    /**
-     * Extracts the ID from the given JWT token.
-     * @param token the JWT token
-     * @return the ID extracted from the token
-     */
+    
     @Override
     public String extractId(String token) {
         return extractClaim(token, claims -> claims.get("id", String.class));
     }
 
-    /**
-     * Returns the key used for signing the JWT tokens.
-     * @return the signing key
-     */
+    
     @Override
     public Key getSignInKey() {
         byte[] signature = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(signature);
     }
 
-    /**
-     * Extract claim t.
-     *
-     * @param <T>            the type parameter
-     * @param token          the token
-     * @param claimsResolver the claims resolver
-     * @return the t
-     */
+    
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver){
         final Claims claims = extractAllClaimsSafe(token);
         return claimsResolver.apply(claims);

@@ -1,14 +1,12 @@
 package com.auth.app.exceptions;
 
-/**
- * The type Refresh token expired exception.
- */
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+
+@ResponseStatus(value = HttpStatus.UNAUTHORIZED)
 public class RefreshTokenExpiredException extends Throwable {
-    /**
-     * Instantiates a new Refresh token expired exception.
-     *
-     * @param message the message
-     */
+    
     public RefreshTokenExpiredException(String message) {
         super(message);
     }
