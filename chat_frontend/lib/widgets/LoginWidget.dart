@@ -2,56 +2,58 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
+const String apiUrl = 'http://localhost:8080/api/auth/authenticate';
 class LoginWidget extends StatefulWidget {
   LoginWidget({Key? key}) : super(key: key);
-
   @override
   _LoginWidgetState createState() => _LoginWidgetState();
 }
-
 class _LoginWidgetState extends State<LoginWidget> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
   void _authenticate() async {
     final String email = _emailController.text;
     final String password = _passwordController.text;
-
-    final http.Response response = await http.post(
-      Uri.parse('http://localhost:8080/api/auth/authenticate'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, String>{
-        'email': email,
-        'password': password,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      // Parse the response body for the token
-      Map<String, dynamic> responseBody = jsonDecode(response.body);
-      String token = responseBody['token'];
-
-      // Save the token in local storage
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', token);
-
-      Navigator.pushReplacementNamed(context, '/chat');
-      print('Logged in successfully');
-    } else {
-      print('Failed to login');
+    try {
+      final http.Response response = await http.post(
+        Uri.parse(apiUrl),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, String>{
+          'email': email,
+          'password': password,
+        }),
+      );
+      if (response.statusCode == 200) {
+        // Parse the response body for the token
+        Map<String, dynamic> responseBody = jsonDecode(response.body);
+        String token = responseBody['token'];
+        // Save the token in local storage
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', token);
+        Navigator.pushReplacementNamed(context, '/chat');
+        print('Logged in successfully');
+      } else {
+        print('Failed to login');
+      }
+    } catch (e) {
+      print('Error occurred during authentication: $e');
     }
   }
-
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          child: Container(
+          child: SizedBox(
             width: 300,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -62,7 +64,7 @@ class _LoginWidgetState extends State<LoginWidget> {
                   children: <Widget>[
                     Text(
                       'Login',
-                      style: Theme.of(context).textTheme.headline4,
+                      style: Theme.of(context).textTheme.headlineMedium,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 32),

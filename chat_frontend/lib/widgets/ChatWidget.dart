@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../DTO/ChatRoomResponse.dart';
@@ -29,9 +30,12 @@ class _ChatWidgetState extends State<ChatWidget> {
     fetchChatRooms();
     connectToSocketIO();
   }
-  Future<List<ChatRoomDTO>> getAllChats() async {
+  Future<String> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    Object? token = prefs.get('token');
+    return prefs.get('token') as String;
+  }
+  Future<List<ChatRoomDTO>> getAllChats() async {
+    final token = _getToken();
     const url = 'http://localhost:8080/api/user/allChats';
 
     final headers = {'Authorization': 'Bearer $token'};
@@ -65,8 +69,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
     activeRoomId = id;
 
-    final prefs = await SharedPreferences.getInstance();
-    Object? token = prefs.get('token');
+    final token = _getToken();
     const url = 'http://localhost:8080/api/user/allMessages';
     final body = json.encode(RoomRequest(roomId: id).toJson());
     final headers = {
@@ -164,10 +167,8 @@ class _ChatWidgetState extends State<ChatWidget> {
     }
   }
   void scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _messageScrollController.jumpTo(
-        _messageScrollController.position.maxScrollExtent,
-      );
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _messageScrollController.jumpTo(_messageScrollController.position.maxScrollExtent,);
     });
   }
 
@@ -504,6 +505,5 @@ class _ChatWidgetState extends State<ChatWidget> {
       ),
     );
   }
-
 }
 

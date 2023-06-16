@@ -1,7 +1,5 @@
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -27,10 +25,6 @@ class _PasswordResetWidgetState extends State<PasswordResetWidget> {
     resetToken = widget.token; // we get the token directly from the widget now
   }
 
-  String _parseResetTokenFromUrl() {
-    final Uri currentUrl = Uri.base;
-    return currentUrl.queryParameters['token'] ?? '';
-  }
 
 
   void _resetPassword() async {
@@ -69,7 +63,7 @@ class _PasswordResetWidgetState extends State<PasswordResetWidget> {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          child: Container(
+          child: SizedBox(
             width: 300,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -80,7 +74,7 @@ class _PasswordResetWidgetState extends State<PasswordResetWidget> {
                   children: <Widget>[
                     Text(
                       'Password Reset',
-                      style: Theme.of(context).textTheme.headline4,
+                      style: Theme.of(context).textTheme.headlineMedium,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 32),

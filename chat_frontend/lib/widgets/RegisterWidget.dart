@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
+const String _apiEndpoint = 'http://localhost:8080/api/auth/register';
 class RegisterWidget extends StatefulWidget {
   RegisterWidget({Key? key}) : super(key: key);
-
   @override
   _RegisterWidgetState createState() => _RegisterWidgetState();
 }
-
 class _RegisterWidgetState extends State<RegisterWidget> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
@@ -16,25 +14,12 @@ class _RegisterWidgetState extends State<RegisterWidget> {
   final TextEditingController _confirmPasswordController =
   TextEditingController();
   String? _errorMessage;
-
   Future<void> _register() async {
     final String email = _emailController.text;
     final String password = _passwordController.text;
     final String confirmPassword = _confirmPasswordController.text;
-
     try {
-      final http.Response response = await http.post(
-        Uri.parse('http://localhost:8080/api/auth/register'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(<String, String>{
-          'email': email,
-          'password': password,
-          'confirmPassword': confirmPassword,
-        }),
-      );
-
+      final http.Response response = await _registerUser(email, password, confirmPassword);
       if (response.statusCode == 201) {
         print('Registration successful');
         if (mounted) {
@@ -60,13 +45,26 @@ class _RegisterWidgetState extends State<RegisterWidget> {
       }
     }
   }
+  Future<http.Response> _registerUser(String email, String password, String confirmPassword) async {
+    return await http.post(
+      Uri.parse(_apiEndpoint),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'email': email,
+        'password': password,
+        'confirmPassword': confirmPassword,
+      }),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          child: Container(
+          child: SizedBox(
             width: 300,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -85,7 +83,7 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         child: Text(
                           _errorMessage!,
-                          style: TextStyle(color: Colors.red),
+                          style: const TextStyle(color: Colors.red),
                         ),
                       ),
                     const SizedBox(height: 32),
