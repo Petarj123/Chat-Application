@@ -1,9 +1,6 @@
 package com.auth.app.controller;
 
-import com.auth.app.DTO.InvitationRequest;
-import com.auth.app.DTO.MessageRequest;
-import com.auth.app.DTO.RoomNameRequest;
-import com.auth.app.DTO.RoomRequest;
+import com.auth.app.DTO.*;
 import com.auth.app.exceptions.ChatRoomException;
 import com.auth.app.exceptions.InvalidInvitationException;
 import com.auth.app.exceptions.InvalidUserException;
@@ -30,6 +27,7 @@ public class SocketIOController {
         this.userService = userService;
 
         this.server.addEventListener("sendMessage", MessageRequest.class, this::handleSendMessage);
+        this.server.addEventListener("sendVoiceMessage", VoiceMessageRequest.class, this::handleSendVoiceMessage);
         this.server.addEventListener("createChatRoom", RoomNameRequest.class, this::handleCreateChatRoom);
         this.server.addEventListener("acceptInvite", InvitationRequest.class, this::handleAcceptInvite);
         this.server.addEventListener("createInvite", RoomRequest.class, this::handleCreateInvite);
@@ -54,6 +52,17 @@ public class SocketIOController {
         String token = header.substring(7);
         Message message = chatService.sendMessage(request.roomId(), request.text(), token);
 
+        this.server.getRoomOperations(request.roomId()).sendEvent("newMessage", message);
+
+        if (ackRequest.isAckRequested()) {
+            ackRequest.sendAckData(message);
+        }
+    }
+    private void handleSendVoiceMessage(SocketIOClient client, VoiceMessageRequest request, AckRequest ackRequest){
+        final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
+        String token = header.substring(7);
+
+        Message message = chatService.sendVoiceMessage(request.roomId(), request.voiceMessage(), token);
         this.server.getRoomOperations(request.roomId()).sendEvent("newMessage", message);
 
         if (ackRequest.isAckRequested()) {
