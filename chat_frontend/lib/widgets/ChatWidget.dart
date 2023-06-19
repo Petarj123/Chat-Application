@@ -29,12 +29,14 @@ class _ChatWidgetState extends State<ChatWidget> {
     fetchChatRooms();
     connectToSocketIO();
   }
+
   Future<String> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.get('token') as String;
+    return prefs.getString('token') ?? '';
   }
+
   Future<List<ChatRoomDTO>> getAllChats() async {
-    final token = _getToken();
+    final token = await _getToken();
     const url = 'http://localhost:8080/api/user/allChats';
 
     final headers = {'Authorization': 'Bearer $token'};
@@ -68,7 +70,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
     activeRoomId = id;
 
-    final token = _getToken();
+    final token = await _getToken();
     const url = 'http://localhost:8080/api/user/allMessages';
     final body = json.encode(RoomRequest(roomId: id).toJson());
     final headers = {
@@ -97,7 +99,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
   Future<void> connectToSocketIO() async {
     final prefs = await SharedPreferences.getInstance();
-    Object? token = prefs.get('token');
+    final token = await _getToken();
     print('Token $token');
     socket = IO.io(
       'http://127.0.0.1:8000',
@@ -143,17 +145,19 @@ class _ChatWidgetState extends State<ChatWidget> {
   }
 
   void createChatRoom(String roomName) {
-    if(roomName.isNotEmpty) {
+    if (roomName.isNotEmpty) {
       socket!.emitWithAck('createChatRoom', {'roomName': roomName},
           ack: (List<dynamic> data) {
             setState(() {
-              chatRooms = data.map((json) => ChatRoomDTO.fromJson(json as Map<String, dynamic>)).toList();
+              chatRooms = data.map((json) =>
+                  ChatRoomDTO.fromJson(json as Map<String, dynamic>)).toList();
             });
           }
       );
     }
   }
-  void acceptInvite(String invitationLink){
+
+  void acceptInvite(String invitationLink) {
     if (invitationLink.isNotEmpty) {
       socket!.emitWithAck('acceptInvite', {'invitationLink': invitationLink},
           ack: (List<dynamic> data) {
@@ -165,9 +169,11 @@ class _ChatWidgetState extends State<ChatWidget> {
       );
     }
   }
+
   void scrollToBottom() {
     SchedulerBinding.instance.addPostFrameCallback((_) {
-      _messageScrollController.jumpTo(_messageScrollController.position.maxScrollExtent,);
+      _messageScrollController.jumpTo(
+        _messageScrollController.position.maxScrollExtent,);
     });
   }
 
@@ -177,15 +183,17 @@ class _ChatWidgetState extends State<ChatWidget> {
 
     Navigator.pushReplacementNamed(context, '/login');
   }
-  Future<String> generateInvitationLink(){
+
+  Future<String> generateInvitationLink() {
     Completer<String> completer = Completer<String>();
-    socket!.emitWithAck('createInvite', {'roomId' : activeRoomId},
+    socket!.emitWithAck('createInvite', {'roomId': activeRoomId},
         ack: (String data) {
           completer.complete(data);
         }
     );
     return completer.future;
   }
+
   Future<List<String>> showParticipants() async {
     Completer<List<String>> completer = Completer<List<String>>();
     socket!.emitWithAck(
@@ -320,7 +328,8 @@ class _ChatWidgetState extends State<ChatWidget> {
                                     TextButton(
                                       child: const Text('Join'),
                                       onPressed: () {
-                                        acceptInvite(joinChatRoomController.text);
+                                        acceptInvite(
+                                            joinChatRoomController.text);
                                         Navigator.of(context).pop();
                                       },
                                     ),
@@ -368,7 +377,8 @@ class _ChatWidgetState extends State<ChatWidget> {
                         IconButton(
                           icon: const Icon(Icons.people),
                           onPressed: () async {
-                            List<String> participants = await showParticipants();
+                            List<
+                                String> participants = await showParticipants();
                             showDialog(
                               context: context,
                               builder: (BuildContext context) {
@@ -378,7 +388,10 @@ class _ChatWidgetState extends State<ChatWidget> {
                                     constraints: BoxConstraints(maxHeight: 300),
                                     child: SingleChildScrollView(
                                       child: Column(
-                                        children: participants.map((participant) => ListTile(title: Text(participant))).toList(),
+                                        children: participants.map((
+                                            participant) =>
+                                            ListTile(title: Text(participant)))
+                                            .toList(),
                                       ),
                                     ),
                                   ),
@@ -401,7 +414,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                             String invitationLink = await generateInvitationLink();
                             showDialog(
                                 context: context,
-                                builder: (BuildContext context){
+                                builder: (BuildContext context) {
                                   return AlertDialog(
                                     title: const Text('Invitation Link'),
                                     content: SelectableText(invitationLink),
@@ -460,7 +473,8 @@ class _ChatWidgetState extends State<ChatWidget> {
                         ),
                       ],
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 10.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8.0, vertical: 10.0),
                     child: Row(
                       children: <Widget>[
                         Expanded(
@@ -480,8 +494,10 @@ class _ChatWidgetState extends State<ChatWidget> {
                         const SizedBox(width: 10), // for spacing
                         ElevatedButton(
                           style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all<Color>(Colors.blue),
-                            shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                            backgroundColor: MaterialStateProperty.all<Color>(
+                                Colors.blue),
+                            shape: MaterialStateProperty.all<
+                                RoundedRectangleBorder>(
                               RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -491,6 +507,89 @@ class _ChatWidgetState extends State<ChatWidget> {
                           onPressed: () {
                             sendMessage();
                             scrollToBottom();
+                          },
+                        ),
+                        const SizedBox(width: 10), // for spacing
+                        IconButton(
+                          icon: const Icon(Icons.mic, color: Colors.blue),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return StatefulBuilder(
+                                  builder: (BuildContext context, StateSetter setState) {
+                                    ValueNotifier<int> recordingDuration = ValueNotifier<int>(0);
+                                    Timer? timer;
+
+                                    void startRecording() {
+                                      timer = Timer.periodic(Duration(seconds: 1), (timer) {
+                                        recordingDuration.value++;
+                                      });
+                                    }
+
+                                    void stopRecording() {
+                                      timer?.cancel();
+                                    }
+
+                                    return AlertDialog(
+                                      title: const Text('Recording'),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          ValueListenableBuilder<int>(
+                                            valueListenable: recordingDuration,
+                                            builder: (context, value, child) {
+                                              return Text('Recording duration: ${value}s');
+                                            },
+                                          ),
+                                          Slider(
+                                            value: recordingDuration.value.toDouble(),
+                                            onChanged: (double value) {},
+                                            min: 0,
+                                            max: 60,
+                                          ),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              ValueListenableBuilder<int>(
+                                                valueListenable: recordingDuration,
+                                                builder: (context, value, child) {
+                                                  return ElevatedButton(
+                                                    onPressed: timer?.isActive ?? false
+                                                        ? stopRecording
+                                                        : startRecording,
+                                                    child: timer?.isActive ?? false
+                                                        ? const Text('Stop')
+                                                        : const Text('Start'),
+                                                  );
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 20),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              ElevatedButton(
+                                                child: const Text('Send'),
+                                                onPressed: () {},
+                                              ),
+                                              const SizedBox(width: 10),
+                                              ElevatedButton(
+                                                child: const Text('Cancel'),
+                                                onPressed: () {
+                                                  Navigator.of(context).pop();
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            );
                           },
                         ),
                       ],
@@ -505,4 +604,3 @@ class _ChatWidgetState extends State<ChatWidget> {
     );
   }
 }
-
