@@ -1,14 +1,17 @@
 package com.auth.app.service;
 
-import com.auth.app.DTO.RoomNameRequest;
 import com.auth.app.exceptions.ChatRoomException;
 import com.auth.app.exceptions.InvalidInvitationException;
 import com.auth.app.exceptions.InvalidUserException;
 import com.auth.app.jwt.JwtService;
 import com.auth.app.model.*;
-import com.auth.app.repository.*;
+import com.auth.app.repository.ChatRoomRepository;
+import com.auth.app.repository.InvitationRepository;
+import com.auth.app.repository.MessageRepository;
+import com.auth.app.repository.UserRepository;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
+import org.bson.types.Binary;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -108,6 +111,27 @@ public class ChatService {
 
         chatRoomRepository.save(chatRoom);
 
+        return message;
+    }
+    public Message sendVoiceMessage(String roomId, Binary voiceMessage, String token){
+        String userId = jwtService.extractId(token);
+        String username = jwtService.extractEmail(token);
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow();
+        List<String> participants = chatRoom.getParticipantIds();
+        List<Message> messages = chatRoom.getMessages();
+        if (!participants.contains(userId)){
+            throw new JwtException("User " + userId + " is not a participant");
+        }
+        Message message = Message.builder()
+                .sender(username)
+                .text("")
+                .voiceMessage(voiceMessage)
+                .sentAt(new Date())
+                .build();
+        messageRepository.save(message);
+        messages.add(message);
+        chatRoom.setMessages(messages);
+        chatRoomRepository.save(chatRoom);
         return message;
     }
     public List<String> getParticipants(String token, String roomId) throws ChatRoomException, InvalidUserException {
