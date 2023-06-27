@@ -8,4 +8,4 @@ User Authentication and Authorization: The application includes robust user auth
 
 Custom JWT Filter: The JWT filter intercepts incoming requests to secure endpoints and validates the included JWT. This feature ensures that only authenticated and authorized users can access protected resources.
 
-Real-time Chat: The application uses Socket.IO to facilitate real-time bidirectional communication. Users can send and receive messages in real time, which significantly enhances the user experience.
+Real-time Chat: The application uses Socket.IO to facilitate real-time bidirectional communication. 
