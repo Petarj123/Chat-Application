@@ -26,6 +26,7 @@ class _RegisterWidgetState extends State<RegisterWidget> {
           setState(() {
             _errorMessage = null;
           });
+          Navigator.pushNamed(context, '/login');
         }
       } else if (response.statusCode == 403) {
         Map<String, dynamic> responseBody = jsonDecode(response.body);
@@ -59,7 +60,7 @@ class _RegisterWidgetState extends State<RegisterWidget> {
     );
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(

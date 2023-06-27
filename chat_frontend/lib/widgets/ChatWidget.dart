@@ -238,9 +238,6 @@ class _ChatWidgetState extends State<ChatWidget> {
                         itemCount: chatRooms.length,
                         itemBuilder: (context, index) {
                           final chatRoom = chatRooms[index];
-                          final lastMessage = chatRoom.messages.isNotEmpty
-                              ? chatRoom.messages.last
-                              : null;
 
                           return Card(
                             elevation: 5.0,
@@ -255,14 +252,6 @@ class _ChatWidgetState extends State<ChatWidget> {
                                   color: Colors.blueAccent,
                                 ),
                               ),
-                              subtitle: lastMessage != null
-                                  ? Text(
-                                lastMessage.text,
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                ),
-                              )
-                                  : null,
                               onTap: () {
                                 setState(() {
                                   joinChatRoom(chatRoom.id);
