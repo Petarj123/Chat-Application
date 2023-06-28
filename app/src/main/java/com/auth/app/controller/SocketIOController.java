@@ -27,7 +27,6 @@ public class SocketIOController {
         this.userService = userService;
 
         this.server.addEventListener("sendMessage", MessageRequest.class, this::handleSendMessage);
-        this.server.addEventListener("sendVoiceMessage", VoiceMessageRequest.class, this::handleSendVoiceMessage);
         this.server.addEventListener("createChatRoom", RoomNameRequest.class, this::handleCreateChatRoom);
         this.server.addEventListener("acceptInvite", InvitationRequest.class, this::handleAcceptInvite);
         this.server.addEventListener("createInvite", RoomRequest.class, this::handleCreateInvite);
@@ -37,8 +36,7 @@ public class SocketIOController {
     }
 
     private void handleCreateChatRoom(SocketIOClient client, RoomNameRequest request, AckRequest ackRequest) {
-        final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
-        String token = header.substring(7);
+        String token = getToken(client);
         chatService.createChatRoom(token, request.roomName());
         List<ChatRoom> chatRoomList = userService.getAllChatRooms(token);
 
@@ -48,8 +46,7 @@ public class SocketIOController {
     }
 
     private void handleSendMessage(SocketIOClient client, MessageRequest request, AckRequest ackRequest) throws ChatRoomException {
-        final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
-        String token = header.substring(7);
+        String token = getToken(client);
         Message message = chatService.sendMessage(request.roomId(), request.text(), token);
 
         this.server.getRoomOperations(request.roomId()).sendEvent("newMessage", message);
@@ -58,21 +55,9 @@ public class SocketIOController {
             ackRequest.sendAckData(message);
         }
     }
-    private void handleSendVoiceMessage(SocketIOClient client, VoiceMessageRequest request, AckRequest ackRequest){
-        final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
-        String token = header.substring(7);
-
-        Message message = chatService.sendVoiceMessage(request.roomId(), request.voiceMessage(), token);
-        this.server.getRoomOperations(request.roomId()).sendEvent("newMessage", message);
-
-        if (ackRequest.isAckRequested()) {
-            ackRequest.sendAckData(message);
-        }
-    }
 
     private void handleAcceptInvite(SocketIOClient client, InvitationRequest request, AckRequest ackRequest) throws InvalidInvitationException, ChatRoomException {
-        final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
-        String token = header.substring(7);
+        String token = getToken(client);
         chatService.acceptInvite(token, request.invitationLink());
         List<ChatRoom> chatRoomList = userService.getAllChatRooms(token);
         if (ackRequest.isAckRequested()){
@@ -80,16 +65,14 @@ public class SocketIOController {
         }
     }
     private void handleCreateInvite(SocketIOClient client, RoomRequest request, AckRequest ackRequest){
-        final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
-        String token = header.substring(7);
+        String token = getToken(client);;
         String invite = chatService.createInvite(token, request.roomId());
         if (ackRequest.isAckRequested()) {
             ackRequest.sendAckData(invite);
         }
     }
     private void handleGetParticipants(SocketIOClient client, RoomRequest request, AckRequest ackRequest) throws ChatRoomException, InvalidUserException {
-        final String header = client.getHandshakeData().getUrlParams().get("token").get(0);
-        String token = header.substring(7);
+        String token = getToken(client);
         List<String> participants = chatService.getParticipants(token, request.roomId());
 
         if (ackRequest.isAckRequested()) {
@@ -110,5 +93,9 @@ public class SocketIOController {
         if (ackRequest.isAckRequested()) {
             ackRequest.sendAckData("Left room " + request.roomId());
         }
+    }
+    private String getToken(SocketIOClient client){
+        String header = client.getHandshakeData().getUrlParams().get("token").get(0);
+        return header.substring(7);
     }
 }
