@@ -77,6 +77,14 @@ public class GlobalExceptionHandler {
 
         return response;
     }
+    @ExceptionHandler(ChatRoomException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Map<String, String> handleChatRoomException(ChatRoomException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", ex.getMessage());
+
+        return response;
+    }
 
 }
 
