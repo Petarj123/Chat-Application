@@ -37,11 +37,15 @@ public class ChatService {
         User user = userRepository.findById(userId).orElseThrow();
         List<String> participants = new ArrayList<>();
         participants.add(userId);
+        List<String> admins = new ArrayList<>();
+        admins.add(userId);
         ChatRoom chatRoom = ChatRoom.builder()
                 .roomName(roomName)
                 .participantIds(participants)
+                .groupAdmins(admins)
                 .messages(new ArrayList<>())
                 .createdAt(new Date())
+                .createdBy(userId)
                 .build();
         chatRoomRepository.save(chatRoom);
         List<String> userChatRooms = user.getChatRooms();
@@ -132,6 +136,37 @@ public class ChatService {
         }
         return participantEmails;
     }
+    public void promoteToGroupAdmin(String token, String roomId, String userId) throws InvalidUserException, ChatRoomException {
+        String groupAdminId = jwtService.extractId(token);
+        User groupAdmin = userRepository.findById(groupAdminId).orElseThrow(() -> new InvalidUserException("User with id " + groupAdminId + " is not admin of this chat room"));
+        User user = userRepository.findById(userId).orElseThrow(() -> new InvalidUserException("User with id " + userId + " is not a part of this chat room"));
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
+        if (isGroupAdmin(chatRoom, groupAdmin.getUserId())){
+            promoteParticipantToGroupAdmin(chatRoom, user);
+        } else throw new ChatRoomException("Only group admins can grant admin role to group participants");
+
+    }
+    public void demoteGroupAdmin(String token, String roomId, String adminId) throws ChatRoomException, InvalidUserException {
+        String creatorId = jwtService.extractId(token);
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
+
+        if (!isGroupCreator(chatRoom, creatorId)){
+            throw new ChatRoomException("Only group creators can demote admins");
+        }
+        demoteGroupAdmin(chatRoom, adminId);
+
+    }
+    public void kickUserFromGroup(String token, String roomId, String userId) throws ChatRoomException, InvalidUserException {
+        String groupAdminId = jwtService.extractId(token);
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
+        if (!isGroupAdmin(chatRoom, userId)){
+            throw new ChatRoomException("Only group admins can kick participants from group");
+        }
+        removeUserFromGroup(chatRoom, groupAdminId, userId);
+    }
+
+
+    // PRIVATE METHODS
     private String generateInvitationLink() {
         String invitationToken = UUID.randomUUID().toString();
         return "chatApp/invite/" + invitationToken;
@@ -141,15 +176,65 @@ public class ChatService {
         Date currentTime = new Date();
         long elapsedTime = currentTime.getTime() - createdAt.getTime();
         long elapsedMinutes = TimeUnit.MILLISECONDS.toMinutes(elapsedTime);
-        if (elapsedMinutes > 15){
-            return false;
-        } else {
-            return true;
-        }
+        return elapsedMinutes <= 15;
     }
     private String getParticipantEmail(String participantId) throws InvalidUserException {
         User user = userRepository.findById(participantId).orElseThrow(() -> new InvalidUserException("Could not find user with this id"));
         return user.getEmail();
     }
+    private void promoteParticipantToGroupAdmin(ChatRoom chatRoom, User user){
+        List<String> chatRoomAdmins = chatRoom.getGroupAdmins();
+        chatRoomAdmins.add(user.getUserId());
+        chatRoom.setGroupAdmins(chatRoomAdmins);
+        chatRoomRepository.save(chatRoom);
+    }
+    private void demoteGroupAdmin(ChatRoom chatRoom, String adminId) throws ChatRoomException {
+        if (!isGroupAdmin(chatRoom, adminId)){
+            throw new ChatRoomException("User is not a group admin!");
+        }
+        List<String> groupAdmins = chatRoom.getGroupAdmins();
+        groupAdmins.remove(adminId);
+        chatRoom.setGroupAdmins(groupAdmins);
+        chatRoomRepository.save(chatRoom);
+    }
+    private boolean isGroupAdmin(ChatRoom chatRoom, String userId){
+        return chatRoom.getGroupAdmins().contains(userId);
+    }
+    private boolean isGroupCreator(ChatRoom chatRoom, String userId){
+        return chatRoom.getCreatedBy().equals(userId);
+    }
+    private void removeUserFromGroup(ChatRoom chatRoom, String groupAdminId, String userId) throws ChatRoomException, InvalidUserException {
+        boolean isAdmin = isGroupAdmin(chatRoom, groupAdminId);
+        boolean isUserAdmin = isGroupAdmin(chatRoom, userId);
+        boolean isCreator = isGroupCreator(chatRoom, groupAdminId);
 
+        if (isAdmin && isUserAdmin && !isCreator) {
+            throw new ChatRoomException("Only room creator can kick admins");
+        }
+
+        if (isCreator && isUserAdmin || isAdmin) {
+            User user = userRepository.findById(userId).orElseThrow(() -> new InvalidUserException("Could not find user with this id"));
+            List<String> participants = chatRoom.getParticipantIds();
+
+            if (!participants.contains(userId)){
+                throw new ChatRoomException("User is not a part of this chat room!");
+            }
+
+            participants.remove(userId);
+            chatRoom.setParticipantIds(participants);
+
+            List<String> userChatRooms = user.getChatRooms();
+            if (!userChatRooms.contains(chatRoom.getId())){
+                throw new ChatRoomException("User is not a part of this chat room!");
+            }
+
+            userChatRooms.remove(chatRoom.getId());
+            user.setChatRooms(userChatRooms);
+
+            chatRoomRepository.save(chatRoom);
+            userRepository.save(user);
+        } else {
+            throw new ChatRoomException("Only room creator or an admin can kick users");
+        }
+    }
 }
