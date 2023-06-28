@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface AdminRepository extends MongoRepository<Admin, String> {
     Optional<Admin> findByEmail(String email);
     Optional<Admin> findByResetToken(String resetToken);
+
+    boolean existsByEmail(String newEmail);
 }
