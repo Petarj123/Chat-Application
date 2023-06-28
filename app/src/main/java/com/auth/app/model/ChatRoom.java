@@ -21,6 +21,8 @@ public class ChatRoom {
     private String id;
     private String roomName;
     private List<String> participantIds;
+    private List<String> groupAdmins;
     private List<Message> messages;
     private Date createdAt;
+    private String createdBy;
 }
