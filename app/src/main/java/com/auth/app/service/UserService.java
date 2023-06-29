@@ -73,30 +73,5 @@ public class UserService {
         user.setEmail(newEmail);
         userRepository.save(user);
     }
-    public void leaveChatRoom(String token, String roomId) throws ChatRoomException, InvalidUserException {
-        String userId = jwtService.extractId(token);
-        User user = userRepository.findById(userId).orElseThrow(() -> new InvalidUserException("User does not exist"));
-        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
-              .orElseThrow(() -> new ChatRoomException("Chat room does not exist"));
-        if (!chatRoom.getParticipantIds().contains(userId)) {
-            throw new ChatRoomException("User is not a part of this chat room.");
-        }
-        removeChatRoomFromUser(user, chatRoom.getId());
-        removeParticipantsFromChatRoom(chatRoom, user.getUserId());
-    }
 
-
-    // PRIVATE METHODS
-    private void removeParticipantsFromChatRoom(ChatRoom chatRoom, String userId){
-        List<String> participants = chatRoom.getParticipantIds();
-        participants.remove(userId);
-        chatRoom.setParticipantIds(participants);
-        chatRoomRepository.save(chatRoom);
-    }
-    private void removeChatRoomFromUser(User user, String roomId){
-        List<String> chatRooms = user.getChatRooms();
-        chatRooms.remove(roomId);
-        user.setChatRooms(chatRooms);
-        userRepository.save(user);
-    }
 }
