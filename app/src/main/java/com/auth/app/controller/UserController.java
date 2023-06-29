@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user")
@@ -57,18 +58,18 @@ public class UserController {
     }
     @PostMapping("/leave-chat")
     @ResponseStatus(HttpStatus.OK)
-    public void leaveChatRoom(@RequestHeader("Authorization") String header, @RequestParam String roomId) throws ChatRoomException, InvalidUserException {
-        userService.leaveChatRoom(getToken(header), roomId);
+    public List<ChatRoom> leaveChatRoom(@RequestHeader("Authorization") String header, @RequestParam String roomId) throws ChatRoomException, InvalidUserException {
+        return chatService.leaveChatRoom(getToken(header), roomId);
     }
     @PutMapping("/grant-group-admin")
     @ResponseStatus(HttpStatus.OK)
-    public void grantGroupAdminRole(@RequestHeader("Authorization") String header, @RequestBody PromotionRequest request) throws ChatRoomException, InvalidUserException {
-        chatService.promoteToGroupAdmin(getToken(header), request.roomId(), request.userId());
+    public Map<String, String> grantGroupAdminRole(@RequestHeader("Authorization") String header, @RequestBody PromotionRequest request) throws ChatRoomException, InvalidUserException {
+        return chatService.promoteToGroupAdmin(getToken(header), request.roomId(), request.userId());
     }
     @PutMapping("/revoke-group-admin")
     @ResponseStatus(HttpStatus.OK)
-    public void revokeGroupAdminRole(@RequestHeader("Authorization") String header, @RequestBody PromotionRequest request) throws InvalidUserException, ChatRoomException {
-        chatService.demoteGroupAdmin(getToken(header), request.roomId(), request.userId());
+    public Map<String, String> revokeGroupAdminRole(@RequestHeader("Authorization") String header, @RequestBody PromotionRequest request) throws InvalidUserException, ChatRoomException {
+        return chatService.demoteGroupAdmin(getToken(header), request.roomId(), request.userId());
     }
     @PostMapping("/kick-user")
     @ResponseStatus(HttpStatus.OK)
