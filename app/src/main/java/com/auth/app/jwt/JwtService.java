@@ -9,6 +9,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -22,9 +23,8 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class JwtService implements JwtImplementation{
 
+    @Value("${secret.key}")
     private final String SECRET_KEY;
-
-    
     public String generateToken(UserDetails userDetails){
         return generateToken(new HashMap<>(), userDetails);
     }
@@ -112,7 +112,6 @@ public class JwtService implements JwtImplementation{
                 .compact();
     }
 
-    
     @Override
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractEmail(token);
@@ -151,7 +150,6 @@ public class JwtService implements JwtImplementation{
         }
     }
 
-    
     @Override
     public String extractEmail(String token) {
         return extractClaim(token, claims -> claims.get("sub", String.class));
