@@ -16,10 +16,7 @@ import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -31,6 +28,7 @@ public class ChatService {
     private final InvitationRepository invitationRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
 
     public void createChatRoom(String token, String roomName) {
         String userId = jwtService.extractId(token);
@@ -93,7 +91,19 @@ public class ChatService {
         userChatRooms.add(chatRoom.getId());
         userRepository.save(user);
     }
+    public List<ChatRoom> leaveChatRoom(String token, String roomId) throws ChatRoomException, InvalidUserException {
+        String userId = jwtService.extractId(token);
+        User user = userRepository.findById(userId).orElseThrow(() -> new InvalidUserException("User does not exist"));
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new ChatRoomException("Chat room does not exist"));
+        if (!chatRoom.getParticipantIds().contains(userId)) {
+            throw new ChatRoomException("User is not a part of this chat room.");
+        }
+        removeChatRoomFromUser(user, chatRoom.getId());
+        removeParticipantsFromChatRoom(chatRoom, user.getUserId());
 
+        return userService.getAllChatRooms(token);
+    }
     public Message sendMessage(String roomId, String text, String token){
         String userId = jwtService.extractId(token);
         String username = jwtService.extractEmail(token);
@@ -119,7 +129,7 @@ public class ChatService {
 
         return message;
     }
-    public List<String> getParticipants(String token, String roomId) throws ChatRoomException, InvalidUserException {
+    public Map<String, String> getParticipants(String token, String roomId) throws ChatRoomException, InvalidUserException {
         String userId = jwtService.extractId(token);
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Could not find this chat room"));
 
@@ -128,25 +138,32 @@ public class ChatService {
         }
         List<String> participantIds = chatRoom.getParticipantIds();
         System.out.println(participantIds);
-        List<String> participantEmails = new ArrayList<>();
+        Map<String, String> participantEmails = new HashMap<>();
 
         for (String participant : participantIds){
-            String participantEmail = getParticipantEmail(participant);
-            participantEmails.add(participantEmail);
+            User user = getParticipant(participant);
+            if (isGroupCreator(chatRoom, user.getUserId())){
+                participantEmails.put(user.getEmail(), "GROUP CREATOR");
+            } else if (isGroupAdmin(chatRoom, user.getUserId())) {
+                participantEmails.put(user.getEmail(), "GROUP ADMIN");
+            } else {
+                participantEmails.put(user.getEmail(), "PARTICIPANT");
+            }
         }
         return participantEmails;
     }
-    public void promoteToGroupAdmin(String token, String roomId, String userId) throws InvalidUserException, ChatRoomException {
+    public Map<String, String> promoteToGroupAdmin(String token, String roomId, String userId) throws InvalidUserException, ChatRoomException {
         String groupAdminId = jwtService.extractId(token);
         User groupAdmin = userRepository.findById(groupAdminId).orElseThrow(() -> new InvalidUserException("User with id " + groupAdminId + " is not admin of this chat room"));
         User user = userRepository.findById(userId).orElseThrow(() -> new InvalidUserException("User with id " + userId + " is not a part of this chat room"));
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
         if (isGroupAdmin(chatRoom, groupAdmin.getUserId())){
             promoteParticipantToGroupAdmin(chatRoom, user);
+            return getParticipants(token, roomId);
         } else throw new ChatRoomException("Only group admins can grant admin role to group participants");
 
     }
-    public void demoteGroupAdmin(String token, String roomId, String adminId) throws ChatRoomException, InvalidUserException {
+    public Map<String, String> demoteGroupAdmin(String token, String roomId, String adminId) throws ChatRoomException, InvalidUserException {
         String creatorId = jwtService.extractId(token);
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
 
@@ -155,16 +172,40 @@ public class ChatService {
         }
         demoteGroupAdmin(chatRoom, adminId);
 
+        return getParticipants(token, roomId);
     }
-    public void kickUserFromGroup(String token, String roomId, String userId) throws ChatRoomException, InvalidUserException {
+    public Map<String, String> kickUserFromGroup(String token, String roomId, String userId) throws ChatRoomException, InvalidUserException {
         String groupAdminId = jwtService.extractId(token);
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
         if (!isGroupAdmin(chatRoom, userId)){
             throw new ChatRoomException("Only group admins can kick participants from group");
         }
         removeUserFromGroup(chatRoom, groupAdminId, userId);
-    }
 
+        return getParticipants(token, roomId);
+    }
+    public Map<String, String> getGroupRole(String token, String roomId) throws ChatRoomException {
+        String userId = jwtService.extractId(token);
+        String userEmail = jwtService.extractEmail(token);
+
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
+
+        Map<String, String> response = new HashMap<>();
+        if (!chatRoom.getParticipantIds().contains(userId)){
+            throw new ChatRoomException("User with id " + userId + " is not a participant of this chat room");
+        }
+
+        if (isGroupCreator(chatRoom, userId)){
+            response.put(userEmail, "GROUP CREATOR");
+            return response;
+        } else if (isGroupAdmin(chatRoom, userId)){
+            response.put(userEmail, "GROUP ADMIN");
+            return response;
+        } else {
+            response.put(userEmail, "PARTICIPANT");
+            return response;
+        }
+    }
 
     // PRIVATE METHODS
     private String generateInvitationLink() {
@@ -178,9 +219,8 @@ public class ChatService {
         long elapsedMinutes = TimeUnit.MILLISECONDS.toMinutes(elapsedTime);
         return elapsedMinutes <= 15;
     }
-    private String getParticipantEmail(String participantId) throws InvalidUserException {
-        User user = userRepository.findById(participantId).orElseThrow(() -> new InvalidUserException("Could not find user with this id"));
-        return user.getEmail();
+    private User getParticipant(String participantId) throws InvalidUserException {
+        return userRepository.findById(participantId).orElseThrow(() -> new InvalidUserException("Could not find user with this id"));
     }
     private void promoteParticipantToGroupAdmin(ChatRoom chatRoom, User user){
         List<String> chatRoomAdmins = chatRoom.getGroupAdmins();
@@ -236,5 +276,17 @@ public class ChatService {
         } else {
             throw new ChatRoomException("Only room creator or an admin can kick users");
         }
+    }
+    private void removeParticipantsFromChatRoom(ChatRoom chatRoom, String userId){
+        List<String> participants = chatRoom.getParticipantIds();
+        participants.remove(userId);
+        chatRoom.setParticipantIds(participants);
+        chatRoomRepository.save(chatRoom);
+    }
+    private void removeChatRoomFromUser(User user, String roomId){
+        List<String> chatRooms = user.getChatRooms();
+        chatRooms.remove(roomId);
+        user.setChatRooms(chatRooms);
+        userRepository.save(user);
     }
 }

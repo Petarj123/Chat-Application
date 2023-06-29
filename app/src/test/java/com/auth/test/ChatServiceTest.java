@@ -18,10 +18,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+
+import java.util.*;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -131,7 +130,7 @@ public class ChatServiceTest {
         verify(messageRepository, times(1)).save(any(Message.class));
         verify(chatRoomRepository, times(1)).save(any(ChatRoom.class));
     }
-    // ... Add more test cases for sendMessage ...
+
     @Test
     public void getParticipants_success() throws ChatRoomException, InvalidUserException {
         String token = "testToken";
@@ -145,7 +144,7 @@ public class ChatServiceTest {
         when(jwtService.extractId(token)).thenReturn(userId);
         when(chatRoomRepository.findById(roomId)).thenReturn(Optional.of(chatRoom));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        List<String> participants = chatService.getParticipants(token, roomId);
+        Map<String, String> participants = chatService.getParticipants(token, roomId);
         assertEquals(1, participants.size());
         assertEquals(userEmail, participants.get(0));
     }

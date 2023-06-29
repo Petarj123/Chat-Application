@@ -14,6 +14,7 @@ import com.corundumstudio.socketio.SocketIOServer;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class SocketIOController {
@@ -33,6 +34,11 @@ public class SocketIOController {
         this.server.addEventListener("getParticipants", RoomRequest.class, this::handleGetParticipants);
         this.server.addEventListener("joinRoom", RoomRequest.class, this::handleJoinRoom);
         this.server.addEventListener("leaveRoom", RoomRequest.class, this::handleLeaveRoom);
+        this.server.addEventListener("kick", PromotionRequest.class, this::handleKickUserFromGroup);
+        this.server.addEventListener("promote", PromotionRequest.class, this::handlePromoteToGroupAdmin);
+        this.server.addEventListener("demote", PromotionRequest.class, this::handleDemoteGroupAdmin);
+        this.server.addEventListener("getRole", PromotionRequest.class, this::handleGetGroupRole);
+        this.server.addEventListener("leaveChatRoom", RoomRequest.class, this::handleLeaveChatRoom);
     }
 
     private void handleCreateChatRoom(SocketIOClient client, RoomNameRequest request, AckRequest ackRequest) {
@@ -65,7 +71,7 @@ public class SocketIOController {
         }
     }
     private void handleCreateInvite(SocketIOClient client, RoomRequest request, AckRequest ackRequest){
-        String token = getToken(client);;
+        String token = getToken(client);
         String invite = chatService.createInvite(token, request.roomId());
         if (ackRequest.isAckRequested()) {
             ackRequest.sendAckData(invite);
@@ -73,7 +79,7 @@ public class SocketIOController {
     }
     private void handleGetParticipants(SocketIOClient client, RoomRequest request, AckRequest ackRequest) throws ChatRoomException, InvalidUserException {
         String token = getToken(client);
-        List<String> participants = chatService.getParticipants(token, request.roomId());
+        Map<String, String> participants = chatService.getParticipants(token, request.roomId());
 
         if (ackRequest.isAckRequested()) {
             ackRequest.sendAckData(participants);
@@ -92,6 +98,46 @@ public class SocketIOController {
 
         if (ackRequest.isAckRequested()) {
             ackRequest.sendAckData("Left room " + request.roomId());
+        }
+    }
+    private void handleKickUserFromGroup(SocketIOClient client, PromotionRequest request, AckRequest ackRequest) throws ChatRoomException, InvalidUserException {
+        String token = getToken(client);
+        Map<String, String> remainingParticipants = chatService.kickUserFromGroup(token, request.roomId(), request.userId());
+
+        if (ackRequest.isAckRequested()){
+            ackRequest.sendAckData(remainingParticipants);
+        }
+    }
+    private void handleDemoteGroupAdmin(SocketIOClient client, PromotionRequest request, AckRequest ack) throws ChatRoomException, InvalidUserException {
+        String token = getToken(client);
+        Map<String, String> participants = chatService.demoteGroupAdmin(token, request.roomId(), request.userId());
+
+        if (ack.isAckRequested()){
+            ack.sendAckData(participants);
+        }
+    }
+    private void handlePromoteToGroupAdmin(SocketIOClient client, PromotionRequest request, AckRequest ack) throws ChatRoomException, InvalidUserException {
+        String token = getToken(client);
+        Map<String, String> participants = chatService.promoteToGroupAdmin(token, request.roomId(), request.userId());
+
+        if (ack.isAckRequested()){
+            ack.sendAckData(participants);
+        }
+    }
+    private void handleGetGroupRole(SocketIOClient client, PromotionRequest request, AckRequest ack) throws ChatRoomException, InvalidUserException {
+        String token = getToken(client);
+        Map<String, String> emailAndRole = chatService.getGroupRole(token, request.roomId());
+
+        if (ack.isAckRequested()){
+            ack.sendAckData(emailAndRole);
+        }
+    }
+    private void handleLeaveChatRoom(SocketIOClient client, RoomRequest request, AckRequest ack) throws ChatRoomException, InvalidUserException {
+        String token = getToken(client);
+        List<ChatRoom> rooms = chatService.leaveChatRoom(token, request.roomId());
+
+        if (ack.isAckRequested()){
+            ack.sendAckData(rooms);
         }
     }
     private String getToken(SocketIOClient client){

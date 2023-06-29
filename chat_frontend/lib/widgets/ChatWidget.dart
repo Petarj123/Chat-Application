@@ -54,6 +54,22 @@ class _ChatWidgetState extends State<ChatWidget> {
       return [];
     }
   }
+  Future<List<ChatRoomDTO>> leaveChatRoom() async {
+    Completer<List<ChatRoomDTO>> completer = Completer<List<ChatRoomDTO>>();
+
+    socket!.emitWithAck(
+      'leaveChatRoom',
+      {'roomId': activeRoomId},
+      ack: (List<dynamic> data) {
+        List<ChatRoomDTO> updatedChatRooms = data.map((json) => ChatRoomDTO.fromJson(json)).toList();
+        chatRooms = updatedChatRooms;
+        completer.complete(updatedChatRooms);
+      },
+    );
+
+    return completer.future;
+  }
+
 
   void fetchChatRooms() async {
     final List<ChatRoomDTO> fetchedChatRooms = await getAllChats();
@@ -194,19 +210,55 @@ class _ChatWidgetState extends State<ChatWidget> {
     return completer.future;
   }
 
-  Future<List<String>> showParticipants() async {
-    Completer<List<String>> completer = Completer<List<String>>();
+  Future<Map<String, String>> showParticipants() async {
+    Completer<Map<String, String>> completer = Completer<Map<String, String>>();
     socket!.emitWithAck(
       'getParticipants',
       {'roomId': activeRoomId},
-      ack: (List<dynamic> data) {
-        print(data);
-        List<String> participants = List<String>.from(data);
+      ack: (Map<String, dynamic> data) {
+        Map<String, String> participants = data.map((key, value) => MapEntry(key.toString(), value.toString()));
         completer.complete(participants);
       },
     );
     return completer.future;
   }
+  Future<Map<String, String>> getEmailAndRole() async {
+    Completer<Map<String, String>> completer = Completer<Map<String, String>>();
+    socket!.emitWithAck(
+      'getRole',
+      {'roomId': activeRoomId},
+        ack: (Map<String, dynamic> data) {
+          Map<String, String> user = data.map((key, value) => MapEntry(key.toString(), value.toString()));
+          completer.complete(user);
+        },
+    );
+    return completer.future;
+  }
+  Widget _roleIcon(String role) {
+    IconData iconData;
+    String tooltipMessage;
+
+    switch (role) {
+      case "GROUP CREATOR":
+        iconData = Icons.person_pin;
+        tooltipMessage = "Group Creator";
+        break;
+      case "GROUP ADMIN":
+        iconData = Icons.admin_panel_settings;
+        tooltipMessage = "Group Admin";
+        break;
+      default: // PARTICIPANT
+        iconData = Icons.person;
+        tooltipMessage = "Participant";
+    }
+
+    return Tooltip(
+      message: tooltipMessage,
+      child: Icon(iconData),
+    );
+  }
+
+
 
 
   @override
@@ -247,7 +299,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                             child: ListTile(
                               title: Text(
                                 chatRoom.roomName,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.blueAccent,
                                 ),
@@ -366,21 +418,57 @@ class _ChatWidgetState extends State<ChatWidget> {
                         IconButton(
                           icon: const Icon(Icons.people),
                           onPressed: () async {
-                            List<
-                                String> participants = await showParticipants();
+                            Map<String, String> currentUserEmailAndRole = await getEmailAndRole();
+                            Map<String, String> participants = await showParticipants();
+
+                            String currentUserEmail = currentUserEmailAndRole.keys.first;
+                            String currentUserRole = currentUserEmailAndRole.values.first;
+
                             showDialog(
                               context: context,
                               builder: (BuildContext context) {
                                 return AlertDialog(
                                   title: const Text('Participants'),
                                   content: ConstrainedBox(
-                                    constraints: BoxConstraints(maxHeight: 300),
+                                    constraints: const BoxConstraints(maxHeight: 300),
                                     child: SingleChildScrollView(
                                       child: Column(
-                                        children: participants.map((
-                                            participant) =>
-                                            ListTile(title: Text(participant)))
-                                            .toList(),
+                                        children: participants.entries.map((entry) =>
+                                            ListTile(
+                                              leading: _roleIcon(entry.value),
+                                              title: Text("${entry.key}"),
+                                              trailing:
+                                              (currentUserRole == "GROUP CREATOR" && entry.key != currentUserEmail) ||
+                                                  (currentUserRole == "GROUP ADMIN" && entry.value == "PARTICIPANT" && entry.key != currentUserEmail) ?
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  IconButton(
+                                                    icon: const Icon(Icons.keyboard_arrow_up),
+                                                    tooltip: "Promote",
+                                                    onPressed: () {
+                                                      // logic to promote a user
+                                                    },
+                                                  ),
+                                                  IconButton(
+                                                    icon: const Icon(Icons.keyboard_arrow_down),
+                                                    tooltip: "Demote",
+                                                    onPressed: () {
+                                                      // logic to demote a user
+                                                    },
+                                                  ),
+                                                  IconButton(
+                                                    icon: const Icon(Icons.remove_circle),
+                                                    tooltip: "Kick Out",
+                                                    onPressed: () {
+                                                      // logic to kick out a user
+                                                    },
+                                                  ),
+                                                ],
+                                              )
+                                                  : null,
+                                            )
+                                        ).toList(),
                                       ),
                                     ),
                                   ),
@@ -420,6 +508,14 @@ class _ChatWidgetState extends State<ChatWidget> {
                             );
                           },
                         ),
+                        IconButton(
+                          icon: const Icon(Icons.exit_to_app),
+                          onPressed: () async {
+                            setState(() async {
+                              chatRooms = await leaveChatRoom();
+                            });
+                          }
+                        )
                       ],
                     ),
                   ),
