@@ -64,17 +64,17 @@ public class UserController {
     @PutMapping("/grant-group-admin")
     @ResponseStatus(HttpStatus.OK)
     public Map<String, String> grantGroupAdminRole(@RequestHeader("Authorization") String header, @RequestBody PromotionRequest request) throws ChatRoomException, InvalidUserException {
-        return chatService.promoteToGroupAdmin(getToken(header), request.roomId(), request.userId());
+        return chatService.promoteToGroupAdmin(getToken(header), request.roomId(), request.email());
     }
     @PutMapping("/revoke-group-admin")
     @ResponseStatus(HttpStatus.OK)
     public Map<String, String> revokeGroupAdminRole(@RequestHeader("Authorization") String header, @RequestBody PromotionRequest request) throws InvalidUserException, ChatRoomException {
-        return chatService.demoteGroupAdmin(getToken(header), request.roomId(), request.userId());
+        return chatService.demoteGroupAdmin(getToken(header), request.roomId(), request.email());
     }
     @PostMapping("/kick-user")
     @ResponseStatus(HttpStatus.OK)
     public void kickUser(@RequestHeader("Authorization") String header, @RequestBody PromotionRequest request) throws InvalidUserException, ChatRoomException {
-        chatService.kickUserFromGroup(getToken(header), request.roomId(), request.userId());
+        chatService.kickUserFromGroup(getToken(header), request.roomId(), request.email());
     }
 
 
