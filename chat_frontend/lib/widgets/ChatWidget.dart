@@ -22,6 +22,7 @@ class _ChatWidgetState extends State<ChatWidget> {
   final textEditingController = TextEditingController();
   IO.Socket? socket;
   final ScrollController _messageScrollController = ScrollController();
+  bool isMessageSectionVisible = false;
 
   @override
   void initState() {
@@ -61,14 +62,16 @@ class _ChatWidgetState extends State<ChatWidget> {
       'leaveChatRoom',
       {'roomId': activeRoomId},
       ack: (List<dynamic> data) {
-        List<ChatRoomDTO> updatedChatRooms = data.map((json) => ChatRoomDTO.fromJson(json)).toList();
-        chatRooms = updatedChatRooms;
-        completer.complete(updatedChatRooms);
+        setState(() {
+          chatRooms = data.map((json) => ChatRoomDTO.fromJson(json)).toList();
+          completer.complete(chatRooms);
+        });
       },
     );
 
     return completer.future;
   }
+
 
 
   void fetchChatRooms() async {
@@ -133,7 +136,9 @@ class _ChatWidgetState extends State<ChatWidget> {
     socket?.onDisconnect((_) {
       print('Disconnected from Socket.IO server');
     });
-
+    socket!.on('error', (data) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data.toString())));
+    });
     socket?.on('newMessage', (data) {
       final message = MessageDTO.fromJson(data as Map<String, dynamic>);
 
@@ -177,10 +182,14 @@ class _ChatWidgetState extends State<ChatWidget> {
     if (invitationLink.isNotEmpty) {
       socket!.emitWithAck('acceptInvite', {'invitationLink': invitationLink},
           ack: (List<dynamic> data) {
-            setState(() {
-              chatRooms = data.map((json) =>
-                  ChatRoomDTO.fromJson(json as Map<String, dynamic>)).toList();
-            });
+            if (data[0] is String) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data[0])));
+            } else {
+              setState(() {
+                chatRooms = data.map((json) =>
+                    ChatRoomDTO.fromJson(json as Map<String, dynamic>)).toList();
+              });
+            }
           }
       );
     }
@@ -215,6 +224,42 @@ class _ChatWidgetState extends State<ChatWidget> {
     socket!.emitWithAck(
       'getParticipants',
       {'roomId': activeRoomId},
+      ack: (Map<String, dynamic> data) {
+        Map<String, String> participants = data.map((key, value) => MapEntry(key.toString(), value.toString()));
+        completer.complete(participants);
+      },
+    );
+    return completer.future;
+  }
+  Future<Map<String, String>> kickUserFromGroup(String userEmail) async {
+    Completer<Map<String, String>> completer = Completer<Map<String, String>>();
+    socket!.emitWithAck(
+      'kick',
+      {'roomId': activeRoomId, 'email': userEmail}, // Added 'email' to the data being emitted
+      ack: (Map<String, dynamic> data) {
+        Map<String, String> participants = data.map((key, value) => MapEntry(key.toString(), value.toString()));
+        completer.complete(participants);
+      },
+    );
+    return completer.future;
+  }
+  Future<Map<String, String>> promoteParticipantToGroupAdmin(String userEmail) async {
+    Completer<Map<String, String>> completer = Completer<Map<String, String>>();
+    socket!.emitWithAck(
+      'promote',
+      {'roomId': activeRoomId, 'email': userEmail}, // Added 'email' to the data being emitted
+      ack: (Map<String, dynamic> data) {
+        Map<String, String> participants = data.map((key, value) => MapEntry(key.toString(), value.toString()));
+        completer.complete(participants);
+      },
+    );
+    return completer.future;
+  }
+  Future<Map<String, String>> demoteGroupAdminToParticipant(String userEmail) async {
+    Completer<Map<String, String>> completer = Completer<Map<String, String>>();
+    socket!.emitWithAck(
+      'demote',
+      {'roomId': activeRoomId, 'email': userEmail}, // Added 'email' to the data being emitted
       ack: (Map<String, dynamic> data) {
         Map<String, String> participants = data.map((key, value) => MapEntry(key.toString(), value.toString()));
         completer.complete(participants);
@@ -263,7 +308,6 @@ class _ChatWidgetState extends State<ChatWidget> {
 
   @override
   Widget build(BuildContext context) {
-    bool isMessageSectionVisible = messages != null;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chat'),
@@ -369,8 +413,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                                     TextButton(
                                       child: const Text('Join'),
                                       onPressed: () {
-                                        acceptInvite(
-                                            joinChatRoomController.text);
+                                        acceptInvite(joinChatRoomController.text);
                                         Navigator.of(context).pop();
                                       },
                                     ),
@@ -446,22 +489,25 @@ class _ChatWidgetState extends State<ChatWidget> {
                                                   IconButton(
                                                     icon: const Icon(Icons.keyboard_arrow_up),
                                                     tooltip: "Promote",
-                                                    onPressed: () {
-                                                      // logic to promote a user
+                                                    onPressed: () async {
+                                                      await promoteParticipantToGroupAdmin(entry.key);
+                                                      Navigator.of(context).pop();
                                                     },
                                                   ),
                                                   IconButton(
                                                     icon: const Icon(Icons.keyboard_arrow_down),
                                                     tooltip: "Demote",
-                                                    onPressed: () {
-                                                      // logic to demote a user
+                                                    onPressed: () async{
+                                                      await demoteGroupAdminToParticipant(entry.key);
+                                                      Navigator.of(context).pop();
                                                     },
                                                   ),
                                                   IconButton(
                                                     icon: const Icon(Icons.remove_circle),
                                                     tooltip: "Kick Out",
-                                                    onPressed: () {
-                                                      // logic to kick out a user
+                                                    onPressed: () async {
+                                                      await kickUserFromGroup(entry.key);
+                                                      Navigator.of(context).pop();
                                                     },
                                                   ),
                                                 ],
@@ -510,11 +556,13 @@ class _ChatWidgetState extends State<ChatWidget> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.exit_to_app),
-                          onPressed: () async {
-                            setState(() async {
-                              chatRooms = await leaveChatRoom();
-                            });
-                          }
+                            onPressed: () async {
+                              var updatedChatRooms = await leaveChatRoom();
+                              setState(() {
+                                chatRooms = updatedChatRooms;
+                                isMessageSectionVisible = false;
+                              });
+                            }
                         )
                       ],
                     ),
