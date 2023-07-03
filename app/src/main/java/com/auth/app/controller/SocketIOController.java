@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class SocketIOController {
@@ -51,7 +52,7 @@ public class SocketIOController {
         }
     }
 
-    private void handleSendMessage(SocketIOClient client, MessageRequest request, AckRequest ackRequest) throws ChatRoomException {
+    private void handleSendMessage(SocketIOClient client, MessageRequest request, AckRequest ackRequest) {
         String token = getToken(client);
         Message message = chatService.sendMessage(request.roomId(), request.text(), token);
 
@@ -62,14 +63,19 @@ public class SocketIOController {
         }
     }
 
-    private void handleAcceptInvite(SocketIOClient client, InvitationRequest request, AckRequest ackRequest) throws InvalidInvitationException, ChatRoomException {
+    private void handleAcceptInvite(SocketIOClient client, InvitationRequest request, AckRequest ackRequest) {
         String token = getToken(client);
-        chatService.acceptInvite(token, request.invitationLink());
-        List<ChatRoom> chatRoomList = userService.getAllChatRooms(token);
-        if (ackRequest.isAckRequested()){
-            ackRequest.sendAckData(chatRoomList);
+        try {
+            chatService.acceptInvite(token, request.invitationLink());
+            List<ChatRoom> chatRoomList = userService.getAllChatRooms(token);
+            if (ackRequest.isAckRequested()){
+                ackRequest.sendAckData(chatRoomList);
+            }
+        } catch (InvalidInvitationException | ChatRoomException e) {
+            client.sendEvent("error", e.getMessage());
         }
     }
+
     private void handleCreateInvite(SocketIOClient client, RoomRequest request, AckRequest ackRequest){
         String token = getToken(client);
         String invite = chatService.createInvite(token, request.roomId());
@@ -102,15 +108,23 @@ public class SocketIOController {
     }
     private void handleKickUserFromGroup(SocketIOClient client, PromotionRequest request, AckRequest ackRequest) throws ChatRoomException, InvalidUserException {
         String token = getToken(client);
-        Map<String, String> remainingParticipants = chatService.kickUserFromGroup(token, request.roomId(), request.userId());
+        Map<String, Object> result = chatService.kickUserFromGroup(token, request.roomId(), request.email());
+
+        Message message = (Message) result.get("message");
+        result.remove("message");
+        Map<String, String> remainingParticipants = result.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> (String) e.getValue()));
 
         if (ackRequest.isAckRequested()){
             ackRequest.sendAckData(remainingParticipants);
         }
+
+        this.server.getRoomOperations(request.roomId()).sendEvent("newMessage", message);
     }
+
     private void handleDemoteGroupAdmin(SocketIOClient client, PromotionRequest request, AckRequest ack) throws ChatRoomException, InvalidUserException {
         String token = getToken(client);
-        Map<String, String> participants = chatService.demoteGroupAdmin(token, request.roomId(), request.userId());
+        Map<String, String> participants = chatService.demoteGroupAdmin(token, request.roomId(), request.email());
 
         if (ack.isAckRequested()){
             ack.sendAckData(participants);
@@ -118,7 +132,7 @@ public class SocketIOController {
     }
     private void handlePromoteToGroupAdmin(SocketIOClient client, PromotionRequest request, AckRequest ack) throws ChatRoomException, InvalidUserException {
         String token = getToken(client);
-        Map<String, String> participants = chatService.promoteToGroupAdmin(token, request.roomId(), request.userId());
+        Map<String, String> participants = chatService.promoteToGroupAdmin(token, request.roomId(), request.email());
 
         if (ack.isAckRequested()){
             ack.sendAckData(participants);
