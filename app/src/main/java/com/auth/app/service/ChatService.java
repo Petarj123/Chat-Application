@@ -113,7 +113,7 @@ public class ChatService {
         List<Message> messages = chatRoom.getMessages();
 
         if (!participants.contains(userId)){
-            throw new JwtException("User " + userId + "is not a participant");
+            throw new JwtException("User " + userId + "is not a participant of this group");
         }
         Message message = Message.builder()
                 .sender(username)
@@ -152,10 +152,10 @@ public class ChatService {
         }
         return participantEmails;
     }
-    public Map<String, String> promoteToGroupAdmin(String token, String roomId, String userId) throws InvalidUserException, ChatRoomException {
+    public Map<String, String> promoteToGroupAdmin(String token, String roomId, String userEmail) throws InvalidUserException, ChatRoomException {
         String groupAdminId = jwtService.extractId(token);
         User groupAdmin = userRepository.findById(groupAdminId).orElseThrow(() -> new InvalidUserException("User with id " + groupAdminId + " is not admin of this chat room"));
-        User user = userRepository.findById(userId).orElseThrow(() -> new InvalidUserException("User with id " + userId + " is not a part of this chat room"));
+        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new InvalidUserException("User " + userEmail + " is not a part of this chat room"));
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
         if (isGroupAdmin(chatRoom, groupAdmin.getUserId())){
             promoteParticipantToGroupAdmin(chatRoom, user);
@@ -163,27 +163,32 @@ public class ChatService {
         } else throw new ChatRoomException("Only group admins can grant admin role to group participants");
 
     }
-    public Map<String, String> demoteGroupAdmin(String token, String roomId, String adminId) throws ChatRoomException, InvalidUserException {
+    public Map<String, String> demoteGroupAdmin(String token, String roomId, String adminEmail) throws ChatRoomException, InvalidUserException {
         String creatorId = jwtService.extractId(token);
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
-
+        User groupAdmin = userRepository.findByEmail(adminEmail).orElseThrow(() -> new InvalidUserException("User does not exist"));
         if (!isGroupCreator(chatRoom, creatorId)){
             throw new ChatRoomException("Only group creators can demote admins");
         }
-        demoteGroupAdmin(chatRoom, adminId);
+        demoteGroupAdmin(chatRoom, groupAdmin.getUserId());
 
         return getParticipants(token, roomId);
     }
-    public Map<String, String> kickUserFromGroup(String token, String roomId, String userId) throws ChatRoomException, InvalidUserException {
+    public Map<String, Object> kickUserFromGroup(String token, String roomId, String userEmail) throws ChatRoomException, InvalidUserException {
         String groupAdminId = jwtService.extractId(token);
+        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new InvalidUserException("User does not exist"));
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
-        if (!isGroupAdmin(chatRoom, userId)){
+        if (!isGroupAdmin(chatRoom, groupAdminId)){
             throw new ChatRoomException("Only group admins can kick participants from group");
         }
-        removeUserFromGroup(chatRoom, groupAdminId, userId);
-
-        return getParticipants(token, roomId);
+        removeUserFromGroup(chatRoom, groupAdminId, user.getUserId());
+        Message message = sendMessage(roomId, userEmail + " has been kicked by " + jwtService.extractEmail(token), token);
+        Map<String, String> participantsMap = getParticipants(token, roomId);
+        Map<String, Object> combinedMap = new HashMap<>(participantsMap);
+        combinedMap.put("message", message);
+        return combinedMap;
     }
+
     public Map<String, String> getGroupRole(String token, String roomId) throws ChatRoomException {
         String userId = jwtService.extractId(token);
         String userEmail = jwtService.extractEmail(token);
@@ -212,7 +217,10 @@ public class ChatService {
         String invitationToken = UUID.randomUUID().toString();
         return "chatApp/invite/" + invitationToken;
     }
-    private boolean isInvitationValid(Invitation invitation) {
+    private boolean isInvitationValid(Invitation invitation) throws InvalidInvitationException {
+        if (invitation.isExpired()){
+            throw new InvalidInvitationException("Invitation has expired");
+        }
         Date createdAt = invitation.getCreatedAt();
         Date currentTime = new Date();
         long elapsedTime = currentTime.getTime() - createdAt.getTime();
