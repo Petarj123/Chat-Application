@@ -96,7 +96,7 @@ public class SocketIOConfig {
 
         server.addDisconnectListener(socketIOClient -> log.debug("User disconnected with socket " + socketIOClient.getSessionId()));
 
-        server.start();
+        /*server.start();*/
 
         return server;
     }
