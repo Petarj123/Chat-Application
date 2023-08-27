@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-const String apiUrl = 'http://localhost:8080/api/auth/authenticate';
+const String apiUrl = 'http://192.168.0.18:8080/api/auth/authenticate';
 class LoginWidget extends StatefulWidget {
   LoginWidget({Key? key}) : super(key: key);
   @override
@@ -22,7 +22,7 @@ class _LoginWidgetState extends State<LoginWidget> {
           'Content-Type': 'application/json; charset=UTF-8',
         },
         body: jsonEncode(<String, String>{
-          'email': email,
+          'usernameOrEmail': email,
           'password': password,
         }),
       );

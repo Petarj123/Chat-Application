@@ -38,7 +38,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
   Future<List<ChatRoomDTO>> getAllChats() async {
     final token = await _getToken();
-    const url = 'http://localhost:8080/api/user/allChats';
+    const url = 'http://192.168.0.18:8080/api/user/allChats';
 
     final headers = {'Authorization': 'Bearer $token'};
 
@@ -90,7 +90,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     activeRoomId = id;
 
     final token = await _getToken();
-    const url = 'http://localhost:8080/api/user/allMessages';
+    const url = 'http://192.168.0.18:8080/api/user/allMessages';
     final body = json.encode(RoomRequest(roomId: id).toJson());
     final headers = {
       'Authorization': 'Bearer $token',

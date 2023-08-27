@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-const String _apiEndpoint = 'http://localhost:8080/api/auth/register';
+const String _apiEndpoint = 'http://192.168.0.18:8080/api/auth/register';
 class RegisterWidget extends StatefulWidget {
   RegisterWidget({Key? key}) : super(key: key);
   @override
@@ -9,17 +9,20 @@ class RegisterWidget extends StatefulWidget {
 }
 class _RegisterWidgetState extends State<RegisterWidget> {
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
   TextEditingController();
   String? _errorMessage;
+
   Future<void> _register() async {
+    final String username = _usernameController.text;
     final String email = _emailController.text;
     final String password = _passwordController.text;
     final String confirmPassword = _confirmPasswordController.text;
     try {
-      final http.Response response = await _registerUser(email, password, confirmPassword);
+      final http.Response response = await _registerUser(username, email, password, confirmPassword);
       if (response.statusCode == 201) {
         print('Registration successful');
         if (mounted) {
@@ -46,13 +49,14 @@ class _RegisterWidgetState extends State<RegisterWidget> {
       }
     }
   }
-  Future<http.Response> _registerUser(String email, String password, String confirmPassword) async {
+  Future<http.Response> _registerUser(String username, String email, String password, String confirmPassword) async {
     return await http.post(
       Uri.parse(_apiEndpoint),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },
       body: jsonEncode(<String, String>{
+        'username': username,
         'email': email,
         'password': password,
         'confirmPassword': confirmPassword,
@@ -88,6 +92,20 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                         ),
                       ),
                     const SizedBox(height: 32),
+                    TextFormField(
+                      controller: _usernameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Username',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your username';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _emailController,
                       decoration: const InputDecoration(
