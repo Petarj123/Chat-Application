@@ -35,7 +35,7 @@ public class SocketIOConfig {
         config.setHostname(HOST);
         config.setPort(PORT);
         server = new SocketIOServer(config);
-        server.start();
+
         server.addConnectListener(socketIOClient -> {
             final String header = socketIOClient.getHandshakeData().getUrlParams().get("token").get(0);
             if (header == null || !header.startsWith("Bearer ")) {
