@@ -4,6 +4,7 @@ import com.auth.app.DTO.AuthenticationResponse;
 import com.auth.app.DTO.RegistrationRequest;
 import com.auth.app.exceptions.*;
 import com.auth.app.jwt.service.JwtService;
+import com.auth.app.model.user.model.Role;
 import com.auth.app.model.user.model.SecureUser;
 import com.auth.app.model.user.model.User;
 import com.auth.app.model.user.repository.UserRepository;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.UUID;
 
 
@@ -48,7 +50,7 @@ public class AuthenticationService {
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
                 .chatRooms(new HashSet<>())
-                .roles(new HashSet<>())
+                .roles(new HashSet<>(List.of(Role.USER)))
                 .createdAt(new Date())
                 .build();
         userRepository.save(user);
