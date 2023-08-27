@@ -1,5 +1,5 @@
 package com.auth.app.DTO;
 
 
-public record AuthenticationRequest(String email, String password) {
+public record AuthenticationRequest(String usernameOrEmail, String password) {
 }

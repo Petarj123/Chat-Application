@@ -5,7 +5,7 @@ import com.auth.app.exceptions.*;
 import com.auth.app.model.ChatRoom;
 import com.auth.app.model.Message;
 import com.auth.app.service.ChatService;
-import com.auth.app.service.UserService;
+import com.auth.app.model.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;

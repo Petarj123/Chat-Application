@@ -15,7 +15,7 @@ public class EmailSenderService {
     
     public void sendRegistrationEmail(String toEmail){
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("nnotificationovic@gmail.com");
+        message.setFrom("pjankovic03@gmail.com");
         message.setTo(toEmail);
         message.setSubject("Registration Confirmation");
         message.setText("Dear "+toEmail + ",\n" +
@@ -31,7 +31,7 @@ public class EmailSenderService {
     
     public void sendRecoveryPasswordEmail(String to, String resetLink){
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("nnotificationovic@gmail.com");
+        message.setFrom("pjankovic03@gmail.com");
         message.setTo(to);
         message.setSubject("Password Recovery");
         message.setText("Please click on following link " + buildResetLink(resetLink));

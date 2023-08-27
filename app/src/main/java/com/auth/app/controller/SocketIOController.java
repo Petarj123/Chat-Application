@@ -7,7 +7,7 @@ import com.auth.app.exceptions.InvalidUserException;
 import com.auth.app.model.ChatRoom;
 import com.auth.app.model.Message;
 import com.auth.app.service.ChatService;
-import com.auth.app.service.UserService;
+import com.auth.app.model.user.service.UserService;
 import com.corundumstudio.socketio.AckRequest;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
@@ -138,7 +138,7 @@ public class SocketIOController {
             ack.sendAckData(participants);
         }
     }
-    private void handleGetGroupRole(SocketIOClient client, PromotionRequest request, AckRequest ack) throws ChatRoomException, InvalidUserException {
+    private void handleGetGroupRole(SocketIOClient client, PromotionRequest request, AckRequest ack) throws ChatRoomException {
         String token = getToken(client);
         Map<String, String> emailAndRole = chatService.getGroupRole(token, request.roomId());
 

@@ -1,4 +1,4 @@
-package com.auth.app.model;
+package com.auth.app.model.user.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -7,23 +7,25 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Set;
 
-@Document(collection = "ChatRooms")
 @Data
+@Document(collection = "users")
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ChatRoom {
+public class User {
+
     @Id
     private String id;
-    private String roomName;
-    private Set<String> participantIds;
-    private Set<String> groupAdmins;
-    private List<Message> messages;
+    private String username;
+    private String email;
+    private String password;
+    private Set<Role> roles;
+    private Set<String> chatRooms;
+    private String refreshToken;
+    private String resetPasswordToken;
     private Date createdAt;
-    private String createdBy;
+    private boolean isLocked;
 }
