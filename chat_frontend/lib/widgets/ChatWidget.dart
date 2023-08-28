@@ -119,15 +119,15 @@ class _ChatWidgetState extends State<ChatWidget> {
   Future<void> connectToSocketIO() async {
     final prefs = await SharedPreferences.getInstance();
     final token = await _getToken();
-    print('Token $token');
     socket = IO.io(
-      'ws:192.168.0.18:8000',
+      'http://192.168.0.18:8000',
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .setQuery({'token': 'Bearer $token'})
           .disableAutoConnect()
           .build(),
     );
+    print('USPEH');
 
     socket?.onConnect((_) {
       print('Connected to Socket.IO server');
