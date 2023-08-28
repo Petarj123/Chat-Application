@@ -3,6 +3,8 @@ package com.auth.app.controller;
 import com.auth.app.DTO.*;
 import com.auth.app.exceptions.*;
 import com.auth.app.jwt.service.JwtService;
+import com.auth.app.model.user.model.User;
+import com.auth.app.model.user.repository.UserRepository;
 import com.auth.app.service.AuthenticationService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     
     @PostMapping("/register")
@@ -37,18 +40,15 @@ public class AuthenticationController {
     
     @PostMapping("/recovery")
     @ResponseStatus(HttpStatus.OK)
-    public void recoveryEmail(@RequestHeader("Authorization") String header) throws JsonProcessingException {
-        String token = header.substring(7);
-        authenticationService.passwordRecoveryEmail(token);
+    public void recoveryEmail(@RequestBody EmailRequest request) {
+        authenticationService.passwordRecoveryEmail(request.email());
     }
 
     
     @PutMapping("/reset")
     @ResponseStatus(HttpStatus.OK)
-    public void resetPassword(@RequestBody PasswordRequest request,@RequestParam("resetToken") String resetToken, @RequestHeader("Authorization") String header) throws PasswordMismatchException, InvalidPasswordException, InvalidResetPasswordTokenException {
-        String token = header.substring(7);
-        String username = jwtService.getUsername(token);
-
-        authenticationService.resetPassword(username, resetToken, request.password(), request.confirmPassword());
+    public void resetPassword(@RequestBody PasswordRequest request, @RequestParam("token") String resetToken) throws PasswordMismatchException, InvalidPasswordException, InvalidResetPasswordTokenException, InvalidUserException {
+        User user = userRepository.findByResetPasswordToken(resetToken).orElseThrow(() -> new InvalidUserException("Could not find user."));
+        authenticationService.resetPassword(user.getUsername(), resetToken, request.password(), request.confirmPassword());
     }
 }

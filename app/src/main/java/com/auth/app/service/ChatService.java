@@ -288,6 +288,9 @@ public class ChatService {
     }
     private void removeParticipantsFromChatRoom(ChatRoom chatRoom, String userId){
         Set<String> participants = chatRoom.getParticipantIds();
+        Set<String> admins = chatRoom.getGroupAdmins();
+
+        admins.remove(userId);
         participants.remove(userId);
         chatRoom.setParticipantIds(participants);
         chatRoomRepository.save(chatRoom);

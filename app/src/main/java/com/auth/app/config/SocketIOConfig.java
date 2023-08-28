@@ -49,7 +49,7 @@ public class SocketIOConfig {
             try {
                 if (jwtService.validateToken(token)) {
                     username = jwtService.getUsername(token);
-                    log.debug("User connected to " + socketIOClient.getSessionId());
+                    System.out.println(username + " connected to " + socketIOClient.getSessionId());
                 } else {
                     try {
                         username = jwtService.getUsername(token);
@@ -96,7 +96,7 @@ public class SocketIOConfig {
 
         server.addDisconnectListener(socketIOClient -> log.debug("User disconnected with socket " + socketIOClient.getSessionId()));
 
-        /*server.start();*/
+        server.start();
 
         return server;
     }

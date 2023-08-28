@@ -71,10 +71,9 @@ public class AuthenticationService {
 
     
     @SneakyThrows
-    public void passwordRecoveryEmail(String token) {
-        String username = jwtService.getUsername(token);
+    public void passwordRecoveryEmail(String email) {
 
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User not found."));
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException("User not found."));
 
         user.setResetPasswordToken(generateResetToken());
 
