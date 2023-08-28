@@ -127,8 +127,6 @@ class _ChatWidgetState extends State<ChatWidget> {
           .disableAutoConnect()
           .build(),
     );
-    print('USPEH');
-
     socket?.onConnect((_) {
       print('Connected to Socket.IO server');
     });
