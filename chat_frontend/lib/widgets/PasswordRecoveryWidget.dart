@@ -11,7 +11,7 @@ class _PasswordRecoveryWidgetState extends State<PasswordRecoveryWidget> {
   Future<bool> _sendRecoveryEmail(String email) async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8080/api/auth/recovery'),
+        Uri.parse('http://192.168.0.18:8080/api/auth/recovery'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },

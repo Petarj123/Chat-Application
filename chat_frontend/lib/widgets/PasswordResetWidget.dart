@@ -32,11 +32,11 @@ class _PasswordResetWidgetState extends State<PasswordResetWidget> {
       final String password = _passwordController.text;
       final String confirmPassword = _confirmPasswordController.text;
 
-      final apiEndpoint = Uri.parse('http://localhost:8080/api/auth/reset');
+      final apiEndpoint = Uri.parse('http://192.168.0.18:8080/api/auth/reset');
 
       // append token to the URL
       final apiEndpointWithToken = apiEndpoint.replace(queryParameters: {'token': resetToken});
-
+      print(resetToken);
       final http.Response response = await http.put(
         apiEndpointWithToken,
         headers: <String, String>{
