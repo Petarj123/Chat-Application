@@ -121,7 +121,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     final token = await _getToken();
     print('Token $token');
     socket = IO.io(
-      'http://127.0.0.1:8000',
+      'ws:192.168.0.18:8000',
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .setQuery({'token': 'Bearer $token'})
