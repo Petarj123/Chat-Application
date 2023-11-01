@@ -27,7 +27,6 @@ public class SocketIOConfig {
     private int PORT;
     private SocketIOServer server;
     private final JwtService jwtService;
-    private final CustomUserDetails customUserDetailsService;
     private final UserRepository userRepository;
     @Bean
     public SocketIOServer socketIOServer(){
@@ -72,7 +71,6 @@ public class SocketIOConfig {
 
                             if (refreshTokenExpiry.before(new Date())) {
                                 socketIOClient.disconnect();
-                                return;
                             } else {
                                 // The refresh token is still valid, renew the JWT
                                 String newToken = jwtService.generateToken(username);
@@ -81,11 +79,9 @@ public class SocketIOConfig {
                             }
                         } else {
                             socketIOClient.disconnect();
-                            return;
                         }
                     } else {
                         socketIOClient.disconnect();
-                        return;
                     }
                 }
             } catch (Exception e) {
