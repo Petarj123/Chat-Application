@@ -38,6 +38,7 @@ public class ChatService {
         participants.add(userId);
         Set<String> admins = new HashSet<>();
         admins.add(userId);
+
         ChatRoom chatRoom = ChatRoom.builder()
                 .roomName(roomName)
                 .participantIds(participants)
@@ -46,10 +47,13 @@ public class ChatService {
                 .createdAt(new Date())
                 .createdBy(userId)
                 .build();
+
         chatRoomRepository.save(chatRoom);
+
         Set<String> userChatRooms = user.getChatRooms();
         userChatRooms.add(chatRoom.getId());
         user.setChatRooms(userChatRooms);
+
         userRepository.save(user);
     }
 
@@ -60,6 +64,7 @@ public class ChatService {
         if (!chatRoom.getParticipantIds().contains(userId)){
             throw new RuntimeException("User " + userId + "is not in chat room");
         }
+
         Invitation invitation = Invitation.builder()
                 .senderId(userId)
                 .chatroomId(roomId)
@@ -68,6 +73,7 @@ public class ChatService {
                 .isExpired(false)
                 .build();
         invitationRepository.save(invitation);
+
         return invitation.getInvitationLink();
     }
     public void acceptInvite(String token, String invitationLink) throws InvalidInvitationException, ChatRoomException {
@@ -75,20 +81,26 @@ public class ChatService {
         User user = userRepository.findById(userId).orElseThrow();
         Invitation invitation = invitationRepository.findByInvitationLink(invitationLink)
                 .orElseThrow(() -> new InvalidInvitationException("Invitation link is not valid"));
+
         if (!isInvitationValid(invitation)){
             throw new InvalidInvitationException("Invitation link is expired");
         }
+
         ChatRoom chatRoom = chatRoomRepository.findById(invitation.getChatroomId()).orElseThrow();
         Set<String> chatRoomParticipants = chatRoom.getParticipantIds();
         Set<String> userChatRooms = user.getChatRooms();
+
         if (chatRoomParticipants.contains(userId)){
             throw new ChatRoomException("User is already part of this room");
         }
+
         chatRoomParticipants.add(userId);
         chatRoom.setParticipantIds(chatRoomParticipants);
         chatRoomRepository.save(chatRoom);
+
         invitation.setExpired(true);
         invitationRepository.save(invitation);
+        
         userChatRooms.add(chatRoom.getId());
         userRepository.save(user);
     }
@@ -97,9 +109,11 @@ public class ChatService {
         User user = userRepository.findById(userId).orElseThrow(() -> new InvalidUserException("User does not exist"));
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new ChatRoomException("Chat room does not exist"));
+
         if (!chatRoom.getParticipantIds().contains(userId)) {
             throw new ChatRoomException("User is not a part of this chat room.");
         }
+
         removeChatRoomFromUser(user, chatRoom.getId());
         removeParticipantsFromChatRoom(chatRoom, user.getId());
 
@@ -137,6 +151,7 @@ public class ChatService {
         if (!chatRoom.getParticipantIds().contains(userId)){
             throw new ChatRoomException("User with id " + userId + " is not a participant of this chat room");
         }
+
         Set<String> participantIds = chatRoom.getParticipantIds();
         System.out.println(participantIds);
         Map<String, String> participantEmails = new HashMap<>();
@@ -158,6 +173,7 @@ public class ChatService {
         User groupAdmin = userRepository.findById(groupAdminId).orElseThrow(() -> new InvalidUserException("User with id " + groupAdminId + " is not admin of this chat room"));
         User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new InvalidUserException("User " + userEmail + " is not a part of this chat room"));
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
+
         if (isGroupAdmin(chatRoom, groupAdmin.getId())){
             promoteParticipantToGroupAdmin(chatRoom, user);
             return getParticipants(token, roomId);
@@ -168,9 +184,11 @@ public class ChatService {
         String creatorId = jwtService.getId(token);
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
         User groupAdmin = userRepository.findByEmail(adminEmail).orElseThrow(() -> new InvalidUserException("User does not exist"));
+
         if (!isGroupCreator(chatRoom, creatorId)){
             throw new ChatRoomException("Only group creators can demote admins");
         }
+
         demoteGroupAdmin(chatRoom, groupAdmin.getId());
 
         return getParticipants(token, roomId);
@@ -179,9 +197,11 @@ public class ChatService {
         String groupAdminId = jwtService.getId(token);
         User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new InvalidUserException("User does not exist"));
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomException("Invalid chat room"));
+
         if (!isGroupAdmin(chatRoom, groupAdminId)){
             throw new ChatRoomException("Only group admins can kick participants from group");
         }
+
         removeUserFromGroup(chatRoom, groupAdminId, user.getId());
         Message message = sendMessage(roomId, userEmail + " has been kicked by " + jwtService.getEmail(token), token);
         Map<String, String> participantsMap = getParticipants(token, roomId);
